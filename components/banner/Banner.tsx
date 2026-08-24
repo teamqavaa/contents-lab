@@ -15,7 +15,7 @@ const tutors = [
 const mainCourses = [
   {
     id: 1,
-    image: '/course-1.png',
+    image: '/career.jpg',
     stat: '92%',
     text: 'Career Outcome Success',
     author: null,
@@ -23,15 +23,15 @@ const mainCourses = [
   },
   {
     id: 2,
-    image: '/course-2.png',
+    image: '/ceo.jpg',
     stat: null,
     text: null,
-    author: { name: 'Mark Jhongson', title: 'CEO at Tutorly' },
+    author: { name: 'Mark Jhongson', title: 'See curriculum' },
     video: true,
   },
   {
     id: 3,
-    image: '/course-3.png',
+    image: '/tutors.jpg',
     stat: '100+',
     text: 'Experienced tutor',
     author: null,

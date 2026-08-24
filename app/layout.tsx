@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/footer/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,8 +26,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={montserrat.className}>
       <body className="min-h-full flex flex-col">
-        <Navbar/>
-        {children}
+        <Navbar />
+        <div className="w-full max-w-full overflow-x-clip relative">
+          {children}
+        </div>
+        <Footer />
       </body>
     </html>
   );
