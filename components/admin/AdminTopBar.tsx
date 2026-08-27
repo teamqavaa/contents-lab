@@ -1,5 +1,8 @@
-import { Bell, ChevronDown, Menu, Search } from "lucide-react";
+"use client";
 
+import { LogOut, Bell, ChevronDown, Menu, Search } from "lucide-react";
+
+import { logoutAction } from "@/lib/admin-actions";
 import { InitialAvatar } from "./InitialAvatar";
 
 export function AdminTopBar({ onMenu }: { onMenu?: () => void }) {
@@ -53,6 +56,17 @@ export function AdminTopBar({ onMenu }: { onMenu?: () => void }) {
             className="hidden text-zinc-400 sm:block"
           />
         </div>
+
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            aria-label="Log out"
+            title="Log out"
+            className="grid size-8 shrink-0 place-items-center rounded-full text-zinc-500 transition-colors hover:bg-red-50 hover:text-red-600"
+          >
+            <LogOut size={16} strokeWidth={1.5} />
+          </button>
+        </form>
       </div>
     </header>
   );

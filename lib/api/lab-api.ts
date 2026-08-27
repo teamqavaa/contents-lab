@@ -1,0 +1,174 @@
+// Staff-facing client for the Digital Readiness Lab backend. Every call carries
+// the SSO access token from the httpOnly cookie; the backend rejects non-staff.
+const LABS_API_URL = process.env.LABS_API_URL ?? "http://localhost:8000";
+
+type ApiResult<T> = {
+  ok: boolean;
+  data: T | null;
+  error: string | null;
+  status: number;
+};
+
+async function adminFetch<T>(
+  token: string,
+  path: string,
+  init?: RequestInit
+): Promise<ApiResult<T>> {
+  try {
+    const res = await fetch(`${LABS_API_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...(init?.headers ?? {}),
+      },
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      return { ok: false, data: null, error: `Request failed (${res.status})`, status: res.status };
+    }
+    if (res.status === 204) {
+      return { ok: true, data: null, error: null, status: 204 };
+    }
+    const body = (await res.json()) as T;
+    return { ok: true, data: body, error: null, status: res.status };
+  } catch (e) {
+    return {
+      ok: false,
+      data: null,
+      error: e instanceof Error ? e.message : "Network error",
+      status: 0,
+    };
+  }
+}
+
+export type Skill = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  icon: string;
+  order: number;
+  is_active: boolean;
+};
+
+export type Lab = {
+  id: string;
+  title: string;
+  description: string | null;
+  language: string;
+  status: string;
+  difficulty: string;
+  skill: string | null;
+  skill_slug: string;
+  created_at: string;
+  starter_code: string;
+  objectives: LabObjective[];
+};
+
+export type LabObjective = {
+  id: string;
+  lab: string;
+  order: number;
+  title: string;
+  content: string;
+  hint: string | null;
+  starter_code: string;
+};
+
+export type AdminUser = {
+  id: string;
+  full_name: string | null;
+  display_name: string | null;
+  email: string | null;
+  phone: string | null;
+  role: string;
+  is_active: boolean;
+  is_staff: boolean;
+  date_joined: string;
+};
+
+export async function apiListSkills(token: string) {
+  return adminFetch<Skill[]>(token, "/api/admin/skills/");
+}
+
+export async function apiCreateSkill(token: string, payload: Partial<Skill>) {
+  return adminFetch<Skill>(token, "/api/admin/skills/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiUpdateSkill(token: string, id: string, payload: Partial<Skill>) {
+  return adminFetch<Skill>(token, `/api/admin/skills/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiDeleteSkill(token: string, id: string) {
+  return adminFetch<void>(token, `/api/admin/skills/${id}/`, { method: "DELETE" });
+}
+
+export async function apiListLabs(token: string) {
+  return adminFetch<Lab[]>(token, "/api/admin/labs/");
+}
+
+export async function apiCreateLab(token: string, payload: Partial<Lab>) {
+  return adminFetch<Lab>(token, "/api/admin/labs/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiUpdateLab(token: string, id: string, payload: Partial<Lab>) {
+  return adminFetch<Lab>(token, `/api/admin/labs/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiDeleteLab(token: string, id: string) {
+  return adminFetch<void>(token, `/api/admin/labs/${id}/`, { method: "DELETE" });
+}
+
+export async function apiListObjectives(token: string, labId: string) {
+  return adminFetch<LabObjective[]>(token, `/api/admin/labs/${labId}/objectives/`);
+}
+
+export async function apiCreateObjective(token: string, labId: string, payload: Partial<LabObjective>) {
+  return adminFetch<LabObjective>(token, `/api/admin/labs/${labId}/objectives/`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiUpdateObjective(
+  token: string,
+  labId: string,
+  objectiveId: string,
+  payload: Partial<LabObjective>
+) {
+  return adminFetch<LabObjective>(token, `/api/admin/labs/${labId}/objectives/${objectiveId}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiDeleteObjective(token: string, labId: string, objectiveId: string) {
+  return adminFetch<void>(token, `/api/admin/labs/${labId}/objectives/${objectiveId}/`, {
+    method: "DELETE",
+  });
+}
+
+export async function apiListUsers(token: string, role?: string) {
+  const query = role ? `?role=${encodeURIComponent(role)}` : "";
+  return adminFetch<AdminUser[]>(token, `/api/admin/users/${query}`);
+}
+
+export async function apiUpdateUser(token: string, id: string, payload: Partial<AdminUser>) {
+  return adminFetch<AdminUser>(token, `/api/admin/users/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}

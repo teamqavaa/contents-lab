@@ -5,6 +5,7 @@ export type RowAction = {
   icon: LucideIcon;
   label: string;
   tone?: "default" | "destructive";
+  onClick?: () => void;
 };
 
 const TONE_CLASS: Record<NonNullable<RowAction["tone"]>, string> = {
@@ -16,12 +17,13 @@ const TONE_CLASS: Record<NonNullable<RowAction["tone"]>, string> = {
 export function RowActions({ actions }: { actions: RowAction[] }) {
   return (
     <div className="inline-flex items-center justify-end gap-0.5">
-      {actions.map(({ icon: Icon, label, tone = "default" }) => (
+      {actions.map(({ icon: Icon, label, tone = "default", onClick }) => (
         <button
           key={label}
           type="button"
           title={label}
           aria-label={label}
+          onClick={onClick}
           className={cn(
             "grid size-7 shrink-0 place-items-center rounded-md transition-colors",
             TONE_CLASS[tone]
