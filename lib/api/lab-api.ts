@@ -7,6 +7,9 @@ type ApiResult<T> = {
   data: T | null;
   error: string | null;
   status: number;
+  // Parsed body of a non-2xx response when it was JSON; bulk endpoints return
+  // per-row errors there.
+  detail?: unknown;
 };
 
 async function adminFetch<T>(
@@ -25,7 +28,13 @@ async function adminFetch<T>(
       cache: "no-store",
     });
     if (!res.ok) {
-      return { ok: false, data: null, error: `Request failed (${res.status})`, status: res.status };
+      let detail: unknown = null;
+      try {
+        detail = await res.json();
+      } catch {
+        // Non-JSON error body; nothing to surface.
+      }
+      return { ok: false, data: null, error: `Request failed (${res.status})`, status: res.status, detail };
     }
     if (res.status === 204) {
       return { ok: true, data: null, error: null, status: 204 };
@@ -87,6 +96,28 @@ export type AdminUser = {
   is_staff: boolean;
   date_joined: string;
 };
+
+export type BulkUserError = {
+  row: number;
+  field: string;
+  message: string;
+};
+
+export type BulkUsersResult = {
+  created: number;
+  updated: number;
+  errors: BulkUserError[];
+};
+
+export async function apiBulkUsers(
+  token: string,
+  payload: { mode: "create" | "upsert"; rows: Record<string, unknown>[] }
+) {
+  return adminFetch<BulkUsersResult>(token, "/api/admin/users/bulk/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
 
 export async function apiListSkills(token: string) {
   return adminFetch<Skill[]>(token, "/api/admin/skills/");

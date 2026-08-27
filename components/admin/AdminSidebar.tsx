@@ -78,7 +78,7 @@ export function AdminSidebar({
         className
       )}
     >
-      <div className="mb-5 flex items-center gap-2.5 px-3">
+      <div className="mb-1 flex items-center gap-2.5 px-3">
         <div
           className="grid size-8 flex-shrink-0 place-items-center rounded-lg bg-white/10 text-white"
           title="Qavaa Digital Readiness Lab"
@@ -89,6 +89,9 @@ export function AdminSidebar({
           Qavaa
         </span>
       </div>
+      <p className="mb-5 px-3 text-[10px] font-medium uppercase tracking-widest text-white/40">
+        Admin Portal
+      </p>
 
       <nav className="flex w-full flex-1 flex-col gap-1 px-2">
         {navItems.map(({ href, label, icon }) => {

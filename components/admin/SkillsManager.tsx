@@ -32,6 +32,12 @@ const columns: DataColumn<Skill>[] = [
     render: (s) => <span className="text-muted-foreground">{s.slug}</span>,
   },
   {
+    key: "order",
+    header: "Order",
+    sortValue: (s) => s.order,
+    render: (s) => <span className="tabular-nums text-muted-foreground">{s.order}</span>,
+  },
+  {
     key: "icon",
     header: "Icon",
     render: (s) => <Badge variant="outline">{s.icon || "—"}</Badge>,
@@ -65,6 +71,10 @@ function SkillForm() {
           <input id="icon" name="icon" placeholder="git" className={inputClass} />
         </div>
         <div className="space-y-1">
+          <label htmlFor="order" className="text-xs font-medium text-foreground">Order</label>
+          <input id="order" name="order" type="number" min="0" defaultValue="0" className={inputClass} />
+        </div>
+        <div className="space-y-1">
           <label htmlFor="is_active" className="text-xs font-medium text-foreground">Active</label>
           <select id="is_active" name="is_active" defaultValue="1" className={inputClass}>
             <option value="1">Yes</option>
@@ -95,6 +105,18 @@ export function SkillsManager({ skills }: { skills: Skill[] }) {
         renderRowActions={(skill) => (
           <RowActions
             actions={[
+              {
+                icon: Pencil,
+                label: "Edit order",
+                onClick: () => {
+                  const next = prompt(`Display order for "${skill.title}"`, String(skill.order));
+                  if (next !== null && next.trim() !== "") {
+                    updateSkillAction(skill.id, { order: Number(next) }).then(() =>
+                      location.reload()
+                    );
+                  }
+                },
+              },
               {
                 icon: Pencil,
                 label: skill.is_active ? "Deactivate" : "Activate",
