@@ -5,12 +5,12 @@ import CourseCard, { CourseItem } from './CourseCard';
 import FilterSidebar, { FilterState } from './FilterSidebar';
 import { getPopularCourses } from '@/actions/courses';
 
-export default function CourseExplorer() {
+export default function CourseExplorer({ initialQuery = "" }: { initialQuery?: string }) {
   const [activeTab, setActiveTab] = useState<'Discover' | 'All courses' | 'Favorites' | 'In progress'>('Discover');
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [filters, setFilters] = useState<FilterState>({
-    searchQuery: '',
+    searchQuery: initialQuery,
     selectedTypes: [],
     selectedDifficulties: [],
     selectedTopics: [],

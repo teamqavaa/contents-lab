@@ -28,8 +28,8 @@ export default function SearchTrigger() {
         </svg>
       </button>
 
-      {/* Le Modal Popup */}
-      <SearchModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      {/* Le Modal Popup; monté uniquement quand ouvert pour réinitialiser l'état */}
+      {isOpen && <SearchModal isOpen={isOpen} onClose={() => setIsOpen(false)} />}
     </>
   );
 }
