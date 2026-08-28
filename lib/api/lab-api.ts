@@ -97,6 +97,18 @@ export type AdminUser = {
   date_joined: string;
 };
 
+export type AdminUserCreateInput = {
+  full_name?: string | null;
+  display_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  role?: string;
+  is_active?: boolean;
+  is_staff?: boolean;
+  language?: string;
+  password?: string;
+};
+
 export type BulkUserError = {
   row: number;
   field: string;
@@ -195,6 +207,13 @@ export async function apiDeleteObjective(token: string, labId: string, objective
 export async function apiListUsers(token: string, role?: string) {
   const query = role ? `?role=${encodeURIComponent(role)}` : "";
   return adminFetch<AdminUser[]>(token, `/api/admin/users/${query}`);
+}
+
+export async function apiCreateUser(token: string, payload: AdminUserCreateInput) {
+  return adminFetch<AdminUser>(token, "/api/admin/users/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function apiUpdateUser(token: string, id: string, payload: Partial<AdminUser>) {

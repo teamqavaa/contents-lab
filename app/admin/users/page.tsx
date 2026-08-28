@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/admin/PageHeader";
+import { AddUserDialog } from "@/components/admin/AddUserDialog";
 import { ExportUsersButton } from "@/components/admin/ExportUsersButton";
 import { ImportUsersDialog } from "@/components/admin/ImportUsersDialog";
 import { UsersManager } from "@/components/admin/UsersManager";
@@ -13,6 +14,7 @@ export default async function UsersPage() {
   return (
     <div className="mx-auto w-full max-w-5xl">
       <PageHeader title="Users" count={users?.length}>
+        <AddUserDialog />
         <ExportUsersButton users={users ?? []} />
         <ImportUsersDialog />
       </PageHeader>

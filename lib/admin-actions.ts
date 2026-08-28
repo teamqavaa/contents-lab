@@ -32,6 +32,7 @@ import {
   apiCreateLab,
   apiCreateObjective,
   apiCreateSkill,
+  apiCreateUser,
   apiDeleteLab,
   apiDeleteObjective,
   apiDeleteSkill,
@@ -40,6 +41,7 @@ import {
   apiUpdateSkill,
   apiUpdateUser,
 } from "@/lib/api/lab-api";
+import type { AdminUserCreateInput } from "@/lib/api/lab-api";
 
 type ActionResult = { ok: boolean; error?: string };
 
@@ -70,6 +72,26 @@ export async function importUsersAction(
     updated: result.data?.updated ?? 0,
     error: result.error ?? undefined,
     errors: result.ok ? undefined : (detail?.errors ?? undefined),
+  };
+}
+
+export async function createUserAction(
+  input: AdminUserCreateInput
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await apiCreateUser(token, input);
+  if (result.ok) revalidatePath("/admin/users");
+
+  // DRF 400s carry a field -> message list dict; flatten it for display.
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
   };
 }
 

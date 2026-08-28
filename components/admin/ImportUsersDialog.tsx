@@ -22,6 +22,8 @@ const COLUMNS = [
 
 const ROLES = ["student", "instructor", "admin", "parent"];
 
+export { ROLES as USER_ROLES };
+
 const TEMPLATE_ROWS = [
   COLUMNS,
   ["Amina Diallo", "Amina", "amina@example.com", "", "admin", "true", "true", "en", "S3curePass!"],
