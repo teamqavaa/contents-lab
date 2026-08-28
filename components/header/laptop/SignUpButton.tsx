@@ -30,7 +30,7 @@ async function generatePKCE() {
 }
 
 export default function SignUpButton() {
-  const SSO_PORTAL_URL = process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3000";
+  const SSO_PORTAL_URL = process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3001";
   const CLIENT_ID = process.env.NEXT_PUBLIC_SSO_CLIENT_ID || "UCUWyF4S2sglNWTbrz2Qu07DrEnE1lDZpDPuucPy";
   const REDIRECT_URI = "http://localhost:3001/auth/callback";
 

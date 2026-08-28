@@ -1,5 +1,6 @@
 // components/header/NavLinks.tsx
 import Link from 'next/link';
+import LogInButton from './LogInButton';
 
 interface NavItem {
   label: string;
@@ -9,7 +10,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Browse Courses', href: '/courses' },
   { label: 'Explore Careers', href: '/careers' },
-  { label: 'LOG IN', href: '/login' },
 ];
 
 export default function NavLinks() {
@@ -24,6 +24,7 @@ export default function NavLinks() {
           {item.label}
         </Link>
       ))}
+      <LogInButton />
     </nav>
   );
 }

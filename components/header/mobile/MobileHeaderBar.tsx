@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import SearchTrigger from '@/components/search/SearchTrigger';
 import MobileCartButton from './MobuleCartButton';
+import SignUpButton from '@/components/header/laptop/SignUpButton';
 
 
 export default function MobileHeaderBar() {
@@ -71,9 +72,7 @@ export default function MobileHeaderBar() {
 
 
             <div className="pt-4 flex flex-col gap-3">
-              <Link href="/signup" onClick={() => setIsMenuOpen(false)} className="w-full text-center py-3 bg-black text-white dark:bg-white dark:text-black rounded-full font-bold text-sm">
-                SIGN UP
-              </Link>
+              <SignUpButton />
             </div>
           </nav>
         </div>

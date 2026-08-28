@@ -25,7 +25,7 @@ export default function NotAuthorizedPage() {
           This account does not have staff access to the admin area.
         </p>
         <Link
-          href={process.env.SSO_PORTAL_URL ?? "http://localhost:3000"}
+          href={process.env.SSO_PORTAL_URL ?? "http://localhost:3001"}
           className="mt-6 inline-flex items-center justify-center rounded-full bg-zinc-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
         >
           Go to student portal
