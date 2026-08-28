@@ -1,11 +1,23 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { LogOut, Bell, ChevronDown, Menu, Search } from "lucide-react";
 
 import { logoutAction } from "@/lib/admin-actions";
 import { InitialAvatar } from "./InitialAvatar";
 
 export function AdminTopBar({ onMenu }: { onMenu?: () => void }) {
+  const [query, setQuery] = useState("");
+  const router = useRouter();
+
+  function submitSearch(event: React.FormEvent) {
+    event.preventDefault();
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    router.push(`/admin/search?q=${encodeURIComponent(trimmed)}`);
+  }
+
   return (
     <header className="flex h-14 flex-shrink-0 items-center gap-3 border-b border-border bg-white px-4 sm:px-6">
       {onMenu && (
@@ -19,7 +31,7 @@ export function AdminTopBar({ onMenu }: { onMenu?: () => void }) {
         </button>
       )}
 
-      <div className="relative min-w-0 flex-1 sm:max-w-md">
+      <form onSubmit={submitSearch} className="relative min-w-0 flex-1 sm:max-w-md">
         <Search
           size={14}
           strokeWidth={1.5}
@@ -27,11 +39,13 @@ export function AdminTopBar({ onMenu }: { onMenu?: () => void }) {
         />
         <input
           type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
           placeholder="Search users, courses, instructors..."
           aria-label="Search"
           className="h-9 w-full rounded-full border-0 bg-zinc-100 pr-4 pl-9 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
         />
-      </div>
+      </form>
 
       <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
         <button
