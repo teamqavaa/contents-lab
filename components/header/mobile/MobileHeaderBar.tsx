@@ -5,6 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import SearchTrigger from '@/components/search/SearchTrigger';
 import MobileCartButton from './MobuleCartButton';
+import LogInButton from '@/components/header/laptop/LogInButton';
 import SignUpButton from '@/components/header/laptop/SignUpButton';
 
 
@@ -59,6 +60,7 @@ export default function MobileHeaderBar() {
       {/* TIROIR DU MENU MOBILE (Déroulant) */}
       {isMenuOpen && (
         <div className="fixed inset-0 top-[61px] z-30 bg-white dark:bg-neutral-900 md:hidden p-6 animate-in slide-in-from-top-2 duration-200">
+          <div className="fixed inset-0 top-[61px] z-20 bg-black/40" onClick={() => setIsMenuOpen(false)} />
           <nav className="flex flex-col gap-4 text-lg font-bold">
             <Link href="/" onClick={() => setIsMenuOpen(false)} className="py-2 border-b border-neutral-100 dark:border-neutral-800">
               Home
@@ -66,12 +68,13 @@ export default function MobileHeaderBar() {
             <Link href="/courses" onClick={() => setIsMenuOpen(false)} className="py-2 border-b border-neutral-100 dark:border-neutral-800">
               Courses
             </Link>
-            <Link href="/course" onClick={() => setIsMenuOpen(false)} className="py-2 border-b border-neutral-100 dark:border-neutral-800">
+            <Link href="/careers" onClick={() => setIsMenuOpen(false)} className="py-2 border-b border-neutral-100 dark:border-neutral-800">
               career path
             </Link>
 
 
             <div className="pt-4 flex flex-col gap-3">
+              <LogInButton />
               <SignUpButton />
             </div>
           </nav>

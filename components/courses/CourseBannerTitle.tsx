@@ -5,7 +5,7 @@ export default function CourseBannerTitle() {
       <div className="max-w-7xl mx-auto flex flex-col gap-3 sm:gap-4 text-left">
 
         {/* Titre responsive */}
-        <h1 className="text-3xl sm:text-4xl lg:text-3xl font-extrabold text-[#0f172a] tracking-tight leading-tight">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-[#0f172a] tracking-tight leading-tight">
           AI courses
         </h1>
 

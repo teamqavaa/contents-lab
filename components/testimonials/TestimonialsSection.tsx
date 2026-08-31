@@ -43,7 +43,7 @@ export default function TestimonialsSection() {
           <span className="text-xs md:text-sm font-semibold tracking-widest text-neutral-500 uppercase">
             VOICES FROM THE LAB
           </span>
-          <h2 className="text-4xl md:text-5xl lg:text-3xl font-extrabold text-neutral-900 tracking-tight">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 tracking-tight">
             Graduates who ship
           </h2>
         </div>

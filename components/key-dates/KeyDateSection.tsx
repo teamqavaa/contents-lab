@@ -38,7 +38,7 @@ export default function KeyDatesSection() {
           <span className="text-xs md:text-sm font-semibold tracking-widest text-neutral-500 uppercase">
             MARK YOUR CALENDAR
           </span>
-          <h2 className="text-4xl md:text-5xl lg:text-3xl font-extrabold text-neutral-900 tracking-tight">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 tracking-tight">
             Key dates
           </h2>
         </div>

@@ -22,7 +22,7 @@ export default function SectionHeader({
             {subtitle}
           </span>
         )}
-        <h2 className="text-4xl md:text-3xl lg:text-3xl font-extrabold text-neutral-900 tracking-tight">
+        <h2 className="text-3xl md:text-4xl lg:text-5xl font-extrabold text-neutral-900 tracking-tight">
           {title}
         </h2>
       </div>
