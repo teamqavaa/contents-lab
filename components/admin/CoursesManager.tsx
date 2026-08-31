@@ -11,17 +11,32 @@ import { Button } from "@/components/ui/button";
 import {
   createCourseAction,
   createCourseRelatedAction,
+  createLessonAction,
+  createModuleAction,
+  createVideoAction,
   deleteCourseAction,
   deleteCourseRelatedAction,
+  deleteLessonAction,
+  deleteModuleAction,
+  deleteVideoAction,
   updateCourseAction,
   updateCourseRelatedAction,
+  updateLessonAction,
+  updateModuleAction,
+  updateQuizLinkAction,
+  updateVideoAction,
 } from "@/lib/admin-actions";
 import type {
+  ContentTypeRow,
   Course,
   CourseRelatedInput,
   CourseRelatedItem,
   CourseRelatedKind,
   CourseType,
+  Lesson,
+  LessonVideo,
+  Module,
+  Quiz,
 } from "@/lib/api/courses-api";
 
 const inputClass =
@@ -301,14 +316,528 @@ function RelatedPanel({
     </div>
   );
 }
+// Inline editor for a quiz-type lesson: attach any unlinked quiz to this course
+// by writing its polymorphic content_type/object_id (GenericForeignKey).
+function QuizLinkPicker({
+  quizzes,
+  courseCtId,
+  courseId,
+}: {
+  quizzes: Quiz[];
+  courseCtId: number | undefined;
+  courseId: number;
+}) {
+  const [busy, setBusy] = useState(false);
+  const linked = quizzes.filter(
+    (q) => q.content_type === courseCtId && q.object_id === courseId
+  );
+  const pool = quizzes.filter((q) => q.content_type == null);
+  const current = linked.find((q) => q.object_id === courseId) ?? null;
+
+  async function attach(quizId: string) {
+    if (courseCtId == null || quizId === "") return;
+    setBusy(true);
+    const quiz = pool.find((q) => q.id === Number(quizId)) ?? current;
+    if (!quiz) return;
+    const res =
+      quiz.content_type == null
+        ? await updateQuizLinkAction(quiz.id, {
+            content_type: courseCtId,
+            object_id: courseId,
+          })
+        : { ok: false };
+    setBusy(false);
+    if (res.ok) location.reload();
+  }
+
+  if (courseCtId == null) return null;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <select
+        className={inputClass + " flex-1 min-w-[180px]"}
+        value={current ? current.id : ""}
+        disabled={busy}
+        onChange={(e) => attach(e.target.value)}
+      >
+        <option value="">{current ? "Quiz attached" : "Attach a quiz…"}</option>
+        {current && <option value={current.id}>{current.title}</option>}
+        {pool.map((q) => (
+          <option key={q.id} value={q.id}>
+            {q.title}
+          </option>
+        ))}
+      </select>
+      {current && (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            await updateQuizLinkAction(current.id, {
+              content_type: null,
+              object_id: null,
+            });
+            setBusy(false);
+            location.reload();
+          }}
+        >
+          Unlink
+        </Button>
+      )}
+    </div>
+  );
+}
+function VideoEditor({ video }: { video: LessonVideo | null }) {
+  const [url, setUrl] = useState(video?.url ?? "");
+  const [duration, setDuration] = useState(
+    video?.duration_seconds != null ? String(video.duration_seconds) : ""
+  );
+  const [busy, setBusy] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+
+  async function saveVideo() {
+    if (!url.trim()) return;
+    setBusy(true);
+    const payload = {
+      lesson: video!.lesson,
+      url: url.trim(),
+      duration_seconds: duration === "" ? null : Number(duration),
+    };
+    const res = video
+      ? await updateVideoAction(video.id, payload)
+      : await createVideoAction(payload);
+    setBusy(false);
+    if (res.ok) location.reload();
+  }
+
+  if (video && !showForm)
+    return (
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <span className="max-w-[300px] truncate font-mono">{video.url}</span>
+        {video.duration_seconds != null && <span>{video.duration_seconds}s</span>}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setShowForm(true)}
+        >
+          <Pencil size={13} /> Edit video
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            if (confirm("Delete this video?"))
+              deleteVideoAction(video.id).then(() => location.reload());
+          }}
+        >
+          <Trash2 size={13} /> Delete
+        </Button>
+      </div>
+    );
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="https://…/video.mp4"
+        className={inputClass + " flex-1 min-w-[220px]"}
+      />
+      <input
+        value={duration}
+        onChange={(e) => setDuration(e.target.value)}
+        placeholder="sec"
+        type="number"
+        className={inputClass + " w-20"}
+      />
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={saveVideo}
+        disabled={busy || !url.trim()}
+      >
+        <Plus size={13} /> {video ? "Update" : "Add video"}
+      </Button>
+      {video && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => setShowForm(false)}
+        >
+          <X size={13} />
+        </Button>
+      )}
+    </div>
+  );
+}
+function LessonRow({
+  lesson,
+  videos,
+  quizzes,
+  courseCtId,
+  courseId,
+}: {
+  lesson: Lesson;
+  videos: LessonVideo[];
+  quizzes: Quiz[];
+  courseCtId: number | undefined;
+  courseId: number;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(lesson.title);
+  const [lessonType, setLessonType] = useState(lesson.lesson_type);
+  const [order, setOrder] = useState(lesson.order);
+  const [duration, setDuration] = useState(lesson.duration_minutes);
+  const [isActive, setIsActive] = useState(lesson.is_active);
+  const [busy, setBusy] = useState(false);
+  const video = videos.find((v) => v.lesson === lesson.id) ?? null;
+
+  async function save() {
+    setBusy(true);
+    await updateLessonAction(lesson.id, {
+      module: lesson.module,
+      lesson_type: lessonType,
+      title,
+      order,
+      duration_minutes: duration,
+      is_active: isActive,
+    });
+    location.reload();
+  }
+
+  return (
+    <li className="rounded-md border border-border bg-white px-3 py-2">
+      <div className="flex items-start gap-2">
+        {editing ? (
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass + " flex-1 min-w-[160px]"} />
+            <select value={lessonType} onChange={(e) => setLessonType(e.target.value as Lesson["lesson_type"])} className={inputClass + " w-28"}>
+              <option value="video">Video</option>
+              <option value="quiz">Quiz</option>
+            </select>
+            <input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} className={inputClass + " w-20"} />
+            <input type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} className={inputClass + " w-20"} />
+            <select value={isActive ? "1" : "0"} onChange={(e) => setIsActive(e.target.value === "1")} className={inputClass + " w-20"}>
+              <option value="1">Active</option>
+              <option value="0">Draft</option>
+            </select>
+          </div>
+        ) : (
+          <div className="flex-1 text-sm text-foreground">
+            <span className="mr-1.5 text-muted-foreground">{lesson.order}.</span>
+            {lesson.title}
+            <Badge variant="outline" className="ml-2">
+              {lesson.lesson_type}
+            </Badge>
+            <span className="ml-2 text-xs text-muted-foreground">
+              {lesson.duration_minutes} min
+            </span>
+          </div>
+        )}
+        {editing ? (
+          <Button type="button" size="sm" variant="outline" onClick={save} disabled={busy}>
+            Save
+          </Button>
+        ) : (
+          <RowActions
+            actions={[
+              {
+                icon: Pencil,
+                label: "Edit",
+                onClick: () => setEditing(true),
+              },
+              {
+                icon: Trash2,
+                label: "Delete",
+                tone: "destructive",
+                onClick: () => {
+                  if (confirm(`Delete lesson "${lesson.title}"?`))
+                    deleteLessonAction(lesson.id).then(() => location.reload());
+                },
+              },
+            ]}
+          />
+        )}
+      </div>
+      {lessonType === "video" ? (
+        <VideoEditor video={video} />
+      ) : (
+        <QuizLinkPicker
+          quizzes={quizzes}
+          courseCtId={courseCtId}
+          courseId={courseId}
+        />
+      )}
+    </li>
+  );
+}
+function ModuleEditor({
+  module,
+  lessons,
+  videos,
+  quizzes,
+  courseCtId,
+  courseId,
+}: {
+  module: Module;
+  lessons: Lesson[];
+  videos: LessonVideo[];
+  quizzes: Quiz[];
+  courseCtId: number | undefined;
+  courseId: number;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(module.title);
+  const [order, setOrder] = useState(module.order);
+  const [isActive, setIsActive] = useState(module.is_active);
+  const [description, setDescription] = useState(module.description ?? "");
+  const [addingLesson, setAddingLesson] = useState(false);
+  const [lessonTitle, setLessonTitle] = useState("");
+  const [lessonType, setLessonType] = useState<Lesson["lesson_type"]>("video");
+  const [lessonOrder, setLessonOrder] = useState(lessons.length + 1);
+  const [lessonDuration, setLessonDuration] = useState(0);
+
+  async function saveModule() {
+    await updateModuleAction(module.id, {
+      course: module.course,
+      title,
+      order,
+      is_active: isActive,
+      description,
+    });
+    location.reload();
+  }
+
+  async function addLesson() {
+    if (!lessonTitle.trim()) return;
+    const res = await createLessonAction({
+      module: module.id,
+      lesson_type: lessonType,
+      title: lessonTitle.trim(),
+      description: "",
+      order: lessonOrder,
+      is_active: true,
+      duration_minutes: lessonDuration,
+    });
+    if (res.ok) location.reload();
+  }
+
+  return (
+    <li className="rounded-lg border border-border bg-white p-3">
+      <div className="flex items-start gap-2">
+        {editing ? (
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass + " flex-1 min-w-[160px]"} />
+            <input type="number" value={order} onChange={(e) => setOrder(Number(e.target.value))} className={inputClass + " w-24"} />
+            <select value={isActive ? "1" : "0"} onChange={(e) => setIsActive(e.target.value === "1")} className={inputClass + " w-24"}>
+              <option value="1">Active</option>
+              <option value="0">Draft</option>
+            </select>
+          </div>
+        ) : (
+          <div className="flex-1 text-sm font-medium text-foreground">
+            <span className="mr-1.5 text-muted-foreground">{module.order}.</span>
+            {module.title}
+            <StatusDot status={module.is_active ? "active" : "draft"} />
+          </div>
+        )}
+        {editing ? (
+          <Button type="button" size="sm" variant="outline" onClick={saveModule}>
+            Save
+          </Button>
+        ) : (
+          <RowActions
+            actions={[
+              { icon: Pencil, label: "Edit module", onClick: () => setEditing(true) },
+              {
+                icon: Trash2,
+                label: "Delete module",
+                tone: "destructive",
+                onClick: () => {
+                  if (confirm(`Delete module "${module.title}"?`))
+                    deleteModuleAction(module.id).then(() => location.reload());
+                },
+              },
+            ]}
+          />
+        )}
+      </div>
+      {editing && (
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={2}
+          className={textareaClass + " mt-2"}
+        />
+      )}
+      <ul className="mt-2 space-y-1.5">
+        {lessons.length === 0 && (
+          <li className="text-xs text-muted-foreground">No lessons yet.</li>
+        )}
+        {lessons.map((l) => (
+          <LessonRow
+            key={l.id}
+            lesson={l}
+            videos={videos}
+            quizzes={quizzes}
+            courseCtId={courseCtId}
+            courseId={courseId}
+          />
+        ))}
+      </ul>
+      {addingLesson ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            value={lessonTitle}
+            onChange={(e) => setLessonTitle(e.target.value)}
+            placeholder="Lesson title"
+            className={inputClass + " flex-1 min-w-[160px]"}
+          />
+          <select value={lessonType} onChange={(e) => setLessonType(e.target.value as Lesson["lesson_type"])} className={inputClass + " w-28"}>
+            <option value="video">Video</option>
+            <option value="quiz">Quiz</option>
+          </select>
+          <input type="number" value={lessonOrder} onChange={(e) => setLessonOrder(Number(e.target.value))} className={inputClass + " w-20"} />
+          <input type="number" value={lessonDuration} onChange={(e) => setLessonDuration(Number(e.target.value))} className={inputClass + " w-20"} />
+          <Button type="button" size="sm" variant="outline" onClick={addLesson} disabled={!lessonTitle.trim()}>
+            <Plus size={13} /> Add
+          </Button>
+          <Button type="button" size="sm" variant="ghost" onClick={() => setAddingLesson(false)}>
+            <X size={13} />
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="mt-2"
+          onClick={() => {
+            setLessonTitle("");
+            setLessonOrder(lessons.length + 1);
+            setAddingLesson(true);
+          }}
+        >
+          <Plus size={13} /> Add lesson
+        </Button>
+      )}
+    </li>
+  );
+}
+// Nested curriculum editor for one course.
+function CurriculumPanel({
+  modules,
+  lessons,
+  videos,
+  quizzes,
+  contentTypes,
+  courseId,
+}: {
+  modules: Module[];
+  lessons: Lesson[];
+  videos: LessonVideo[];
+  quizzes: Quiz[];
+  contentTypes: ContentTypeRow[];
+  courseId: number;
+}) {
+  const courseModules = modules
+    .filter((m) => m.course === courseId)
+    .sort((a, b) => a.order - b.order);
+  // ContentType of the Course model, used to write quiz polymorphic links.
+  const courseCt = contentTypes.find((ct) => ct.model === "course");
+
+  const [moduleTitle, setModuleTitle] = useState("");
+  const [moduleOrder, setModuleOrder] = useState(courseModules.length + 1);
+  const [moduleActive, setModuleActive] = useState(true);
+
+  async function addModule() {
+    if (!moduleTitle.trim()) return;
+    const res = await createModuleAction({
+      course: courseId,
+      title: moduleTitle.trim(),
+      description: "",
+      order: moduleOrder,
+      is_active: moduleActive,
+    });
+    if (res.ok) location.reload();
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-zinc-50 p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Curriculum
+      </p>
+      {courseModules.length === 0 && (
+        <p className="mb-2 text-xs text-muted-foreground">
+          No modules yet — add the first one below.
+        </p>
+      )}
+      <ul className="space-y-2">
+        {courseModules.map((m) => (
+          <ModuleEditor
+            key={m.id}
+            module={m}
+            lessons={lessons
+              .filter((l) => l.module === m.id)
+              .sort((a, b) => a.order - b.order)}
+            videos={videos}
+            quizzes={quizzes}
+            courseCtId={courseCt?.id}
+            courseId={courseId}
+          />
+        ))}
+      </ul>
+      <div className="mt-3 flex flex-wrap items-center gap-2 rounded-md border border-border bg-white p-3">
+        <input
+          value={moduleTitle}
+          onChange={(e) => setModuleTitle(e.target.value)}
+          placeholder="Module title"
+          className={inputClass + " flex-1 min-w-[160px]"}
+        />
+        <input
+          type="number"
+          value={moduleOrder}
+          onChange={(e) => setModuleOrder(Number(e.target.value))}
+          className={inputClass + " w-20"}
+        />
+        <select
+          value={moduleActive ? "1" : "0"}
+          onChange={(e) => setModuleActive(e.target.value === "1")}
+          className={inputClass + " w-24"}
+        >
+          <option value="1">Active</option>
+          <option value="0">Draft</option>
+        </select>
+        <Button type="button" size="sm" variant="outline" onClick={addModule} disabled={!moduleTitle.trim()}>
+          <Plus size={13} /> Add module
+        </Button>
+      </div>
+    </div>
+  );
+}
 function CourseEditPanel({
   course,
   courseTypes,
   relatedByKind,
+  modules,
+  lessons,
+  videos,
+  quizzes,
+  contentTypes,
 }: {
   course: Course;
   courseTypes: CourseType[];
   relatedByKind: RelatedByKind;
+  modules: Module[];
+  lessons: Lesson[];
+  videos: LessonVideo[];
+  quizzes: Quiz[];
+  contentTypes: ContentTypeRow[];
 }) {
   const [fields, setFields] = useState<Course>(course);
   const [saving, setSaving] = useState(false);
@@ -443,6 +972,15 @@ function CourseEditPanel({
           />
         ))}
       </div>
+
+      <CurriculumPanel
+        modules={modules}
+        lessons={lessons}
+        videos={videos}
+        quizzes={quizzes}
+        contentTypes={contentTypes}
+        courseId={course.id}
+      />
     </div>
   );
 }
@@ -450,10 +988,20 @@ export function CoursesManager({
   courses,
   courseTypes,
   relatedByKind,
+  modules,
+  lessons,
+  videos,
+  contentTypes,
+  quizzes,
 }: {
   courses: Course[];
   courseTypes: CourseType[];
   relatedByKind: RelatedByKind;
+  modules: Module[];
+  lessons: Lesson[];
+  videos: LessonVideo[];
+  contentTypes: ContentTypeRow[];
+  quizzes: Quiz[];
 }) {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
 
@@ -464,6 +1012,11 @@ export function CoursesManager({
           course={editingCourse}
           courseTypes={courseTypes}
           relatedByKind={relatedByKind}
+          modules={modules}
+          lessons={lessons}
+          videos={videos}
+          quizzes={quizzes}
+          contentTypes={contentTypes}
         />
         <Button variant="outline" onClick={() => setEditingCourse(null)}>
           <X size={15} /> Close editor
