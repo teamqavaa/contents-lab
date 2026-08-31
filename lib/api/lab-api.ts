@@ -1,6 +1,7 @@
-// Staff-facing client for the Digital Readiness Lab backend. Every call carries
-// the SSO access token from the httpOnly cookie; the backend rejects non-staff.
-const LABS_API_URL = process.env.LABS_API_URL ?? "http://localhost:8000";
+// Staff-facing client for the labs-domain admin API (courses-api). Every call
+// carries the SSO access token from the httpOnly cookie; the backend rejects
+// non-staff.
+import { COURSES_API_URL } from "./courses-api";
 
 type ApiResult<T> = {
   ok: boolean;
@@ -18,7 +19,7 @@ async function adminFetch<T>(
   init?: RequestInit
 ): Promise<ApiResult<T>> {
   try {
-    const res = await fetch(`${LABS_API_URL}${path}`, {
+    const res = await fetch(`${COURSES_API_URL}${path}`, {
       ...init,
       headers: {
         "Content-Type": "application/json",

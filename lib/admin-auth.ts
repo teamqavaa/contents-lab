@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-
-const LABS_API_URL = process.env.LABS_API_URL ?? "http://localhost:8000";
+import { COURSES_API_URL } from "./api/courses-api";
 
 // Minimal shape returned by /api/users/me/ that the admin gate needs.
 export type AdminSession = {
@@ -15,7 +14,7 @@ export type AdminSession = {
 
 async function fetchMe(token: string): Promise<AdminSession | null> {
   try {
-    const res = await fetch(`${LABS_API_URL}/api/users/me/`, {
+    const res = await fetch(`${COURSES_API_URL}/api/users/me/`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
