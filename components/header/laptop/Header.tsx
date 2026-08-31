@@ -1,38 +1,23 @@
 // components/header/Header.tsx
 "use client";
 
-import { useEffect, useState } from "react";
 import SearchBar from "@/components/search/SearchBar";
 import Logo from "./Logo";
 import NavLinks from "./NavLinks";
 import SignUpButton from "./SignUpButton";
 import UserMenu from "./UserMenu";
 
-export default function Header() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+export interface HeaderUser {
+  name?: string;
+  email?: string;
+}
 
-  useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem("app_a_token");
-      setIsAuthenticated(!!token);
-      setIsLoading(false);
-    };
+interface HeaderProps {
+  user: HeaderUser | null;
+  onSignOut: () => void;
+}
 
-    // Vérification initiale
-    checkAuth();
-
-    // Écoute de l'événement personnalisé déclenché dans la même fenêtre
-    window.addEventListener("authChange", checkAuth);
-    // Écoute des modifications depuis d'autres onglets
-    window.addEventListener("storage", checkAuth);
-
-    return () => {
-      window.removeEventListener("authChange", checkAuth);
-      window.removeEventListener("storage", checkAuth);
-    };
-  }, []);
-
+export default function Header({ user, onSignOut }: HeaderProps) {
   return (
     <header className="hidden md:block fixed top-0 left-0 right-0 z-50 bg-[#f8fafc] pt-6 pb-2">
       <div className="w-[92%] max-w-5xl mx-auto">
@@ -42,9 +27,7 @@ export default function Header() {
           <SearchBar />
 
           <div className="flex items-center gap-2">
-            {!isLoading && (
-              isAuthenticated ? <UserMenu /> : <SignUpButton />
-            )}
+            {user ? <UserMenu user={user} onSignOut={onSignOut} /> : <SignUpButton />}
           </div>
         </div>
       </div>
