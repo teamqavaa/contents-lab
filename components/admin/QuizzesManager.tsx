@@ -15,10 +15,13 @@ import {
   deleteQuestionAction,
   deleteQuizAction,
   updateOptionAction,
-  updateQuestionAction,
   updateQuizAction,
+  updateQuizLinkAction,
 } from "@/lib/admin-actions";
 import type {
+  ContentTypeRow,
+  Course,
+  Module,
   Quiz,
   QuizOption,
   QuizQuestion,
@@ -56,7 +59,84 @@ const columns: DataColumn<Quiz>[] = [
   },
 ];
 
-function QuizForm({ quizTypes }: { quizTypes: QuizType[] }) {
+// Polymorphic link editor for a quiz: target a course or a module.
+// Writes the quiz content_type (of Course/Module) plus object_id.
+type QuizLinkValue = { content_type: string; object_id: string };
+
+function QuizLinkSelects({
+  contentTypes,
+  courses,
+  modules,
+  value,
+  onChange,
+}: {
+  contentTypes: ContentTypeRow[];
+  courses: Course[];
+  modules: Module[];
+  value: QuizLinkValue;
+  onChange: (v: QuizLinkValue) => void;
+}) {
+  const courseCt = contentTypes.find((ct) => ct.model === "course");
+  const moduleCt = contentTypes.find((ct) => ct.model === "module");
+  const targetType =
+    value.content_type === String(courseCt?.id)
+      ? "course"
+      : value.content_type === String(moduleCt?.id)
+        ? "module"
+        : "";
+  const rows = targetType === "course" ? courses : targetType === "module" ? modules : [];
+  const rowIds = new Set(rows.map((r) => String(r.id)));
+  const objectId = value.object_id && rowIds.has(value.object_id) ? value.object_id : "";
+
+  function setType(contentType: string) {
+    onChange({ content_type: contentType, object_id: "" });
+  }
+
+  return (
+    <>
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-foreground">Linked to</label>
+        <select
+          className={inputClass}
+          value={value.content_type}
+          onChange={(e) => setType(e.target.value)}
+        >
+          <option value="">Nothing (unlinked)</option>
+          {courseCt && <option value={String(courseCt.id)}>Course</option>}
+          {moduleCt && <option value={String(moduleCt.id)}>Module</option>}
+        </select>
+      </div>
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-foreground">Target</label>
+        <select
+          className={inputClass}
+          value={objectId}
+          disabled={targetType === ""}
+          onChange={(e) => onChange({ ...value, object_id: e.target.value })}
+        >
+          <option value="">Select a {targetType || "target"}…</option>
+          {rows.map((r) => (
+            <option key={r.id} value={String(r.id)}>
+              {r.title}
+            </option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+}
+function QuizForm({
+  quizTypes,
+  contentTypes,
+  courses,
+  modules,
+}: {
+  quizTypes: QuizType[];
+  contentTypes: ContentTypeRow[];
+  courses: Course[];
+  modules: Module[];
+}) {
+  const [link, setLink] = useState<QuizLinkValue>({ content_type: "", object_id: "" });
   return (
     <form
       action={(formData) => {
@@ -92,6 +172,15 @@ function QuizForm({ quizTypes }: { quizTypes: QuizType[] }) {
           <label className="text-xs font-medium text-foreground">Description</label>
           <input name="description" placeholder="Short description" className={inputClass} />
         </div>
+        <QuizLinkSelects
+          contentTypes={contentTypes}
+          courses={courses}
+          modules={modules}
+          value={link}
+          onChange={setLink}
+        />
+        <input type="hidden" name="content_type" value={link.content_type} />
+        <input type="hidden" name="object_id" value={link.object_id} />
       </div>
       <Button type="submit">
         <Plus size={15} /> Create
@@ -264,16 +353,26 @@ function QuizEditPanel({
   quizTypes,
   questions,
   options,
+  contentTypes,
+  courses,
+  modules,
 }: {
   quiz: Quiz;
   quizTypes: QuizType[];
   questions: QuizQuestion[];
   options: QuizOption[];
+  contentTypes: ContentTypeRow[];
+  courses: Course[];
+  modules: Module[];
 }) {
   const [title, setTitle] = useState(quiz.title);
   const [description, setDescription] = useState(quiz.description ?? "");
   const [typeQuiz, setTypeQuiz] = useState(quiz.type_quiz ? String(quiz.type_quiz) : "");
   const [isActive, setIsActive] = useState(quiz.is_active);
+  const [link, setLink] = useState<QuizLinkValue>({
+    content_type: quiz.content_type != null ? String(quiz.content_type) : "",
+    object_id: quiz.object_id != null ? String(quiz.object_id) : "",
+  });
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -284,7 +383,11 @@ function QuizEditPanel({
       type_quiz: typeQuiz === "" ? null : Number(typeQuiz),
       is_active: isActive,
     });
-    setSaving(false);
+    const linkFields =
+      link.content_type === "" || link.object_id === ""
+        ? { content_type: null, object_id: null }
+        : { content_type: Number(link.content_type), object_id: Number(link.object_id) };
+    await updateQuizLinkAction(quiz.id, linkFields);
     location.reload();
   }
 
@@ -334,6 +437,13 @@ function QuizEditPanel({
             className={textareaClass}
           />
         </div>
+        <QuizLinkSelects
+          contentTypes={contentTypes}
+          courses={courses}
+          modules={modules}
+          value={link}
+          onChange={setLink}
+        />
       </div>
       <QuestionList quizId={quiz.id} questions={questions} options={options} />
     </div>
@@ -345,11 +455,17 @@ export function QuizzesManager({
   quizTypes,
   questions,
   options,
+  courses,
+  modules,
+  contentTypes,
 }: {
   quizzes: Quiz[];
   quizTypes: QuizType[];
   questions: QuizQuestion[];
   options: QuizOption[];
+  courses: Course[];
+  modules: Module[];
+  contentTypes: ContentTypeRow[];
 }) {
   const [editingQuiz, setEditingQuiz] = useState<Quiz | null>(null);
 
@@ -361,6 +477,9 @@ export function QuizzesManager({
           quizTypes={quizTypes}
           questions={questions}
           options={options}
+          contentTypes={contentTypes}
+          courses={courses}
+          modules={modules}
         />
         <Button variant="outline" onClick={() => setEditingQuiz(null)}>
           <X size={15} /> Close editor
@@ -371,7 +490,12 @@ export function QuizzesManager({
 
   return (
     <div className="space-y-4">
-      <QuizForm quizTypes={quizTypes} />
+      <QuizForm
+        quizTypes={quizTypes}
+        contentTypes={contentTypes}
+        courses={courses}
+        modules={modules}
+      />
       <DataTable
         rows={quizzes}
         rowKey={(q) => q.id}

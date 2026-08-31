@@ -6,14 +6,17 @@ import { revalidatePath } from "next/cache";
 
 import { getAdminToken } from "@/lib/admin-auth";
 import {
+  apiBulkCourses,
   courseRelatedApis,
   courseTypesApi,
   coursesApi,
   learningPathsApi,
+  lessonsApi,
+  modulesApi,
   optionsApi,
   questionsApi,
-  quizTypesApi,
   quizzesApi,
+  videosApi,
 } from "@/lib/api/courses-api";
 import type {
   Course,
@@ -22,6 +25,9 @@ import type {
   CourseRelatedKind,
   CourseUpdateInput,
   LearningPath,
+  Lesson,
+  LessonVideo,
+  Module,
   Quiz,
 } from "@/lib/api/courses-api";
 
@@ -60,6 +66,36 @@ export async function importUsersAction(
   const token = await getAdminToken();
   const result = await apiBulkUsers(token, { mode, rows });
   if (result.ok) revalidatePath("/admin/users");
+
+  // Bulk 400s carry per-row errors in the JSON body, not in `error`.
+  const detail = (result.detail ?? null) as
+    | { errors?: { row: number; field: string; message: string }[] }
+    | null;
+
+  return {
+    ok: result.ok,
+    created: result.data?.created ?? 0,
+    updated: result.data?.updated ?? 0,
+    error: result.error ?? undefined,
+    errors: result.ok ? undefined : (detail?.errors ?? undefined),
+  };
+}
+
+export type ImportCoursesResult = {
+  ok: boolean;
+  created: number;
+  updated: number;
+  error?: string;
+  errors?: { row: number; field: string; message: string }[];
+};
+
+export async function importCoursesAction(
+  mode: "create" | "upsert",
+  rows: Record<string, unknown>[]
+): Promise<ImportCoursesResult> {
+  const token = await getAdminToken();
+  const result = await apiBulkCourses(token, { mode, rows });
+  if (result.ok) revalidatePath("/admin/courses");
 
   // Bulk 400s carry per-row errors in the JSON body, not in `error`.
   const detail = (result.detail ?? null) as
@@ -382,6 +418,107 @@ export async function deleteCourseRelatedAction(
   return { ok: result.ok, error: result.error ?? undefined };
 }
 
+// --- curriculum: modules, lessons, and their one-to-one video ---
+// Slides count as one module; the server auto-slugs and stamps timestamps.
+
+export type ModuleInput = Pick<
+  Module,
+  "course" | "title" | "description" | "order" | "is_active"
+>;
+
+export async function createModuleAction(input: ModuleInput): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await modulesApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function updateModuleAction(
+  id: number,
+  fields: Partial<ModuleInput>
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await modulesApi.update(token, id, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function deleteModuleAction(id: number): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await modulesApi.remove(token, id);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export type LessonInput = Pick<
+  Lesson,
+  "module" | "lesson_type" | "title" | "description" | "order" | "is_active" | "duration_minutes"
+>;
+
+export async function createLessonAction(input: LessonInput): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await lessonsApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function updateLessonAction(
+  id: number,
+  fields: Partial<LessonInput>
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await lessonsApi.update(token, id, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function deleteLessonAction(id: number): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await lessonsApi.remove(token, id);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export type LessonVideoInput = Pick<LessonVideo, "lesson" | "url" | "duration_seconds">;
+
+export async function createVideoAction(input: LessonVideoInput): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await videosApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function updateVideoAction(
+  id: number,
+  fields: Partial<LessonVideoInput>
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await videosApi.update(token, id, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function deleteVideoAction(id: number): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await videosApi.remove(token, id);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+// Attaches a quiz to a course or module through the polymorphic link.
+export async function updateQuizLinkAction(
+  id: number,
+  link: { content_type: number | null; object_id: number | null }
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await quizzesApi.update(token, id, link);
+  if (result.ok) {
+    revalidatePath("/admin/quizzes");
+    revalidatePath("/admin/courses");
+  }
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
 // --- quiz sub-resources (questions and their options) ---
 
 export async function createQuestionAction(
@@ -509,11 +646,18 @@ export async function createQuizAction(
 ): Promise<ActionResult> {
   const token = await getAdminToken();
   const typeRaw = String(formData.get("type_quiz") ?? "");
+  const contentTypeRaw = String(formData.get("content_type") ?? "");
+  const objectIdRaw = String(formData.get("object_id") ?? "");
+  const linkFields =
+    contentTypeRaw === "" || objectIdRaw === ""
+      ? {}
+      : { content_type: Number(contentTypeRaw), object_id: Number(objectIdRaw) };
   const result = await quizzesApi.create(token, {
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? "") || null,
     type_quiz: typeRaw === "" ? null : Number(typeRaw),
     is_active: boolField(formData, "is_active"),
+    ...linkFields,
   });
   if (result.ok) revalidatePath("/admin/quizzes");
   return { ok: result.ok, error: result.error ?? undefined };
@@ -521,7 +665,9 @@ export async function createQuizAction(
 
 export async function updateQuizAction(
   id: number,
-  fields: Partial<Pick<Quiz, "title" | "description" | "type_quiz" | "is_active">>
+  fields: Partial<
+    Pick<Quiz, "title" | "description" | "type_quiz" | "is_active" | "content_type" | "object_id">
+  >
 ): Promise<ActionResult> {
   const token = await getAdminToken();
   const result = await quizzesApi.update(token, id, fields);
