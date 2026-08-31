@@ -1,7 +1,7 @@
 // components/header/Header.tsx
 "use client";
 
-import SearchBar from "@/components/search/SearchBar";
+import SearchTrigger from "@/components/search/SearchTrigger";
 import Logo from "./Logo";
 import NavLinks from "./NavLinks";
 import SignUpButton from "./SignUpButton";
@@ -24,7 +24,7 @@ export default function Header({ user, onSignOut }: HeaderProps) {
         <div className="flex items-center justify-between bg-white border border-gray-300 shadow-lg shadow-gray-200/50 rounded-full p-1.5 pl-2">
           <Logo />
           <NavLinks />
-          <SearchBar />
+          <SearchTrigger />
 
           <div className="flex items-center gap-2">
             {user ? <UserMenu user={user} onSignOut={onSignOut} /> : <SignUpButton />}

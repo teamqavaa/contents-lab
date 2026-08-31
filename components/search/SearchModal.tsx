@@ -45,7 +45,7 @@ export default function SearchModal({ isOpen, onClose }: SearchModalProps) {
       />
 
       {/* Contenu du Modal */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 p-4 z-10 animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-3xl bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-neutral-200 dark:border-neutral-800 p-4 z-10 animate-in fade-in zoom-in-95 duration-200">
         <form onSubmit={submitSearch}>
           <div className="flex items-center gap-3">
             {/* Loupe */}
