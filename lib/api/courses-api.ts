@@ -10,8 +10,6 @@ type ApiResult<T> = {
   data: T | null;
   error: string | null;
   status: number;
-  // Parsed body of a non-2xx response when it was JSON; the bulk endpoint
-  // returns per-row errors there.
   detail?: unknown;
 };
 
@@ -35,7 +33,7 @@ async function adminFetch<T>(
       try {
         detail = await res.json();
       } catch {
-        // Non-JSON error body; nothing to surface.
+        // Non-JSON error body
       }
       return { ok: false, data: null, error: `Request failed (${res.status})`, status: res.status, detail };
     }
@@ -54,9 +52,17 @@ async function adminFetch<T>(
   }
 }
 
-// List endpoints are plain DRF routers without pagination.
+// ---------------------------------------------------------------------------
+// Legacy types (kept for backward compatibility with other admin pages)
+//
+// These now describe the real Django model-aligned payloads (`id` is a string:
+// a UUID for most resources, the course slug for courses / learning paths).
+// The legacy tier points at the same /api/{model}/ routers as the Django-
+// aligned tier but with simplified, dashboard-shaped field names.
+// ---------------------------------------------------------------------------
+
 export type CourseType = {
-  id: number;
+  id: string;
   name: string;
   slug: string;
   description: string | null;
@@ -64,16 +70,18 @@ export type CourseType = {
   is_active: boolean;
 };
 
-// Flat, editable shape returned by /api/admin/courses/. PK fields are
-// writable; slug/timestamps are server-managed.
+// Matches the courses API list shape. The list endpoint returns the real PK
+// (`id`) plus the `slug`; course detail CRUD and every learning-path link are
+// keyed on the slug (the CourseViewSet lookup_field), so pickers below submit
+// `course.slug`, not the UUID.
 export type Course = {
-  id: number;
-  type: number | null;
+  id: string;
+  type: string | null;
   title: string;
   subtitle: string | null;
   description: string | null;
   language: string;
-  level: "beginner" | "intermediate" | "advanced";
+  level: "beginner" | "intermediate" | "advanced" | "all";
   slug: string;
   is_active: boolean;
   thumbnail: string | null;
@@ -90,31 +98,6 @@ export type Course = {
   updated_at: string;
 };
 
-export type CourseCreateInput = Pick<
-  Course,
-  | "type"
-  | "title"
-  | "subtitle"
-  | "description"
-  | "language"
-  | "level"
-  | "is_active"
-  | "thumbnail"
-  | "instructor"
-  | "duration_minutes"
-  | "rating"
-  | "review_count"
-  | "price"
-  | "original_price"
-  | "cohort_label"
-  | "audience"
-  | "downloadable_files_count"
->;
-
-export type CourseUpdateInput = Partial<CourseCreateInput>;
-
-// Flat row accepted by the bulk import endpoint. Optional columns are
-// permissive; the server fills defaults for blank cells.
 export type BulkCourseRow = {
   type?: string;
   title: string;
@@ -152,35 +135,14 @@ export async function apiBulkCourses(
   token: string,
   payload: { mode: "create" | "upsert"; rows: Record<string, unknown>[] }
 ): Promise<ApiResult<BulkCoursesResult>> {
-  return adminFetch<BulkCoursesResult>(token, "/api/admin/courses/bulk/", {
+  return adminFetch<BulkCoursesResult>(token, "/api/courses/bulk/", {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-// The Django admin exposes course highlights/outcomes/learning-points/
-// requirements as inlines. They map one-to-one onto four admin resources.
-export type CourseRelatedKind =
-  | "highlights"
-  | "outcomes"
-  | "learning_points"
-  | "requirements";
-
-export type CourseRelatedItem = {
-  id: number;
-  course: number;
-  order: number;
-  content: string;
-};
-
-export type CourseRelatedInput = {
-  course: number;
-  order: number;
-  content: string;
-};
-
 export type LearningPath = {
-  id: number;
+  id: string;
   kind: "skill" | "career";
   title: string;
   slug: string;
@@ -191,61 +153,63 @@ export type LearningPath = {
   includes_certificate: boolean;
   order: number;
   is_active: boolean;
-  courses: number[];
+  courses: string[];
 };
 
 export type Quiz = {
-  id: number;
-  type_quiz: number | null;
+  id: string;
+  type_quiz: string | null;
   title: string;
   description: string | null;
   slug: string;
   is_active: boolean;
-  // Polymorphic link to a Course or a Module; null when unlinked.
   content_type: number | null;
   object_id: number | null;
   created_at: string;
   updated_at: string;
 };
 
-// Curriculum tree: a course owns modules, each module owns lessons, and a
-// video lesson carries one optional video (1:1).
 export type Module = {
-  id: number;
-  course: number;
+  id: string;
+  course: string;
   title: string;
+  slug: string;
   description: string;
   order: number;
-  slug: string;
-  is_active: boolean;
+  is_published: boolean;
+  is_free: boolean;
+  lessons_count: number;
   created_at: string;
   updated_at: string;
 };
 
 export type Lesson = {
-  id: number;
-  module: number;
-  lesson_type: "video" | "quiz";
+  id: string;
+  module: string;
   title: string;
+  slug: string;
   description: string;
   order: number;
-  slug: string;
-  is_active: boolean;
-  duration_minutes: number;
+  is_preview: boolean;
+  is_published: boolean;
+  duration_in_minutes: number;
   created_at: string;
   updated_at: string;
 };
 
 export type LessonVideo = {
-  id: number;
-  lesson: number;
-  url: string;
-  duration_seconds: number | null;
+  id: string;
+  lesson: string;
+  title: string;
+  provider: string;
+  video_url: string;
+  external_id: string | null;
+  thumbnail_url: string | null;
+  duration_in_seconds: number;
   created_at: string;
   updated_at: string;
 };
 
-// Lookup row from /api/admin/content-types/, used to write quiz links.
 export type ContentTypeRow = {
   id: number;
   app_label: string;
@@ -253,7 +217,7 @@ export type ContentTypeRow = {
 };
 
 export type QuizType = {
-  id: number;
+  id: string;
   name: string;
   slug: string;
   description: string;
@@ -261,9 +225,9 @@ export type QuizType = {
 };
 
 export type QuizQuestion = {
-  id: number;
-  quiz: number;
-  type_question: number | null;
+  id: string;
+  quiz: string;
+  type_question: string | null;
   text: string;
   order: number;
   slug: string;
@@ -273,8 +237,8 @@ export type QuizQuestion = {
 };
 
 export type QuizOption = {
-  id: number;
-  question: number;
+  id: string;
+  question: string;
   text: string;
   is_correct: boolean;
   order: number;
@@ -288,39 +252,270 @@ function crud<T>(basePath: string) {
         method: "POST",
         body: JSON.stringify(payload),
       }),
-    update: (token: string, id: number, payload: Partial<T>) =>
+    update: (token: string, id: string, payload: Partial<T>) =>
       adminFetch<T>(token, `${basePath}${id}/`, {
         method: "PATCH",
         body: JSON.stringify(payload),
       }),
-    remove: (token: string, id: number) =>
+    remove: (token: string, id: string) =>
       adminFetch<void>(token, `${basePath}${id}/`, { method: "DELETE" }),
   };
 }
 
-export const courseTypesApi = crud<CourseType>("/api/admin/course-types/");
-export const coursesApi = crud<Course>("/api/admin/courses/");
-export const modulesApi = crud<Module>("/api/admin/modules/");
-export const lessonsApi = crud<Lesson>("/api/admin/lessons/");
-export const videosApi = crud<LessonVideo>("/api/admin/videos/");
-export const contentTypesApi = crud<ContentTypeRow>("/api/admin/content-types/");
-export const learningPathsApi = crud<LearningPath>("/api/admin/learning-paths/");
-export const quizzesApi = crud<Quiz>("/api/admin/quizzes/");
-export const quizTypesApi = crud<QuizType>("/api/admin/quiz-types/");
-export const questionsApi = crud<QuizQuestion>("/api/admin/questions/");
-export const optionsApi = crud<QuizOption>("/api/admin/options/");
+// The legacy tier is now backed by the real Django routers (verified against
+// courses-api :8000). Detail lookups are keyed on the route's lookup_field:
+// - courses and learning paths: the slug (their `id` in payloads)
+// - everything else: the UUID from the payload `id`
+export const courseTypesApi = crud<CourseType>("/api/course-types/");
+// Course detail routes are slug-keyed (lookup_field = 'slug'), unlike the other
+// dashboards which use payload `id`, so courses get slug-aware update/remove.
+export const coursesApi = {
+  list: (token: string) => adminFetch<Course[]>(token, "/api/courses/"),
+  create: (token: string, payload: Partial<Course>) =>
+    adminFetch<Course>(token, "/api/courses/", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  update: (token: string, id: string, payload: Partial<Course>) =>
+    adminFetch<Course>(token, `/api/courses/${id}/`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  remove: (token: string, id: string) =>
+    adminFetch<void>(token, `/api/courses/${id}/`, { method: "DELETE" }),
+};
+export const modulesApi = crud<Module>("/api/modules/");
+export const lessonsApi = crud<Lesson>("/api/lessons/");
+export const videosApi = crud<LessonVideo>("/api/videos/");
+export const contentTypesApi = crud<ContentTypeRow>("/api/content-types/");
+export const learningPathsApi = crud<LearningPath>("/api/learning-paths/");
+export const quizzesApi = crud<Quiz>("/api/quizzes/");
+export const quizTypesApi = crud<QuizType>("/api/quiz-types/");
+export const questionsApi = crud<QuizQuestion>("/api/quiz-questions/");
+export const optionsApi = crud<QuizOption>("/api/quiz-options/");
 
-// Course inline resources. Each entry resolves the kind used by the manager
-// to the admin endpoint holding its rows. All four share the same shape.
-export const courseRelatedApis: Record<
-  CourseRelatedKind,
-  { list: (token: string) => Promise<ApiResult<CourseRelatedItem[]>>; create: (token: string, payload: CourseRelatedInput) => Promise<ApiResult<CourseRelatedItem>>; update: (token: string, id: number, payload: CourseRelatedInput) => Promise<ApiResult<CourseRelatedItem>>; remove: (token: string, id: number) => Promise<ApiResult<void>>; resource: string }
-> = {
-  highlights: { ...crud<CourseRelatedItem>("/api/admin/highlights/"), resource: "Highlight" },
-  outcomes: { ...crud<CourseRelatedItem>("/api/admin/outcomes/"), resource: "Outcome" },
-  learning_points: {
-    ...crud<CourseRelatedItem>("/api/admin/learning-points/"),
-    resource: "Learning point",
-  },
-  requirements: { ...crud<CourseRelatedItem>("/api/admin/requirements/"), resource: "Requirement" },
+// ---------------------------------------------------------------------------
+// Django model-aligned types (source of truth: courses-api models.py)
+// ---------------------------------------------------------------------------
+
+export type DjangoTypeCourse = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  is_virtual: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DjangoCategory = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  parent: string | null;
+  subcategories: DjangoCategory[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DjangoTag = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+export type DjangoCourse = {
+  id: string;
+  category: string;
+  category_details?: { id: string; name: string; slug: string };
+  instructor_id: string;
+  title: string;
+  slug: string;
+  subtitle: string;
+  description: string;
+  language: "english" | "french";
+  level: "beginner" | "intermediate" | "advanced" | "all";
+  status: "draft" | "published";
+  price: string;
+  discount_price: string;
+  tags: string[];
+  tags_details?: DjangoTag[];
+  thumbnail: string | null;
+  promo_video_url: string | null;
+  average_rating: number;
+  total_students: number;
+  total_reviews: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DjangoModule = {
+  id: string;
+  course: string;
+  title: string;
+  slug: string;
+  description: string;
+  order: number;
+  is_published: boolean;
+  is_free: boolean;
+  lessons_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DjangoLessonType = "VIDEO" | "ARTICLE" | "DOCUMENT" | "QUIZ";
+
+export type DjangoLesson = {
+  id: string;
+  module: string;
+  title: string;
+  slug: string;
+  description: string;
+  lesson_type: DjangoLessonType;
+  duration_in_minutes: number;
+  order: number;
+  is_preview: boolean;
+  is_published: boolean;
+  video?: DjangoVideo | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DjangoVideoProvider =
+  | "VIMEO"
+  | "CLOUDFLARE"
+  | "YOUTUBE"
+  | "BUNNY"
+  | "S3_HLS"
+  | "OTHER";
+
+export type DjangoVideo = {
+  id: string;
+  lesson: string;
+  title: string;
+  provider: DjangoVideoProvider;
+  video_url: string;
+  external_id: string | null;
+  thumbnail_url: string | null;
+  duration_in_seconds: number;
+  duration_in_minutes: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DjangoOutcomeCategory =
+  | "SKILL"
+  | "KNOWLEDGE"
+  | "TOOL"
+  | "CERTIFICATION"
+  | "OTHER";
+
+export type DjangoCourseOutcome = {
+  id: string;
+  course: string;
+  description: string;
+  category: DjangoOutcomeCategory;
+  icon: string | null;
+  order: number;
+  is_highlighted: boolean;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DjangoCourseHighlight = {
+  id: string;
+  course: string;
+  title: string;
+  description: string;
+  icon: string | null;
+  order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DjangoCourseLearningPoint = {
+  id: string;
+  course: string;
+  title: string;
+  description: string;
+  icon: string | null;
+  order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DjangoResourceType =
+  | "DOCUMENT"
+  | "ARCHIVE"
+  | "CODE"
+  | "AUDIO"
+  | "IMAGE"
+  | "EXTERNAL_LINK";
+
+export type DjangoResource = {
+  id: string;
+  course: string | null;
+  module: string | null;
+  lesson: string | null;
+  title: string;
+  description: string;
+  resource_type: DjangoResourceType;
+  file: string | null;
+  external_url: string | null;
+  file_size_bytes: number;
+  is_preview_allowed: boolean;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+// ---------------------------------------------------------------------------
+// Django-aligned CRUD helpers (use UUID string IDs, correct /api/ paths)
+// ---------------------------------------------------------------------------
+
+function djangoCrud<T>(basePath: string) {
+  return {
+    list: (token: string) => adminFetch<T[]>(token, basePath),
+    create: (token: string, payload: Record<string, unknown>) =>
+      adminFetch<T>(token, basePath, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    update: (token: string, id: string, payload: Record<string, unknown>) =>
+      adminFetch<T>(token, `${basePath}${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }),
+    remove: (token: string, id: string) =>
+      adminFetch<void>(token, `${basePath}${id}/`, { method: "DELETE" }),
+  };
+}
+
+export const djangoTypeCoursesApi = djangoCrud<DjangoTypeCourse>("/api/course-types/");
+export const djangoCoursesApi = djangoCrud<DjangoCourse>("/api/courses/");
+export const djangoModulesApi = djangoCrud<DjangoModule>("/api/modules/");
+export const djangoLessonsApi = djangoCrud<DjangoLesson>("/api/lessons/");
+export const djangoVideosApi = djangoCrud<DjangoVideo>("/api/videos/");
+export const djangoCategoriesApi = djangoCrud<DjangoCategory>("/api/categories/");
+export const djangoTagsApi = djangoCrud<DjangoTag>("/api/tags/");
+export const djangoOutcomesApi = djangoCrud<DjangoCourseOutcome>("/api/course-outcomes/");
+export const djangoHighlightsApi = djangoCrud<DjangoCourseHighlight>("/api/course-highlights/");
+export const djangoLearningPointsApi = djangoCrud<DjangoCourseLearningPoint>("/api/course-learning-points/");
+export const djangoResourcesApi = djangoCrud<DjangoResource>("/api/resources/");
+
+// Slug-based update/delete for courses (lookup_field = 'slug')
+export const djangoCoursesSlugApi = {
+  update: (token: string, slug: string, payload: Record<string, unknown>) =>
+    adminFetch<DjangoCourse>(token, `/api/courses/${slug}/`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  remove: (token: string, slug: string) =>
+    adminFetch<void>(token, `/api/courses/${slug}/`, { method: "DELETE" }),
 };

@@ -7,31 +7,24 @@ import { revalidatePath } from "next/cache";
 import { getAdminToken } from "@/lib/admin-auth";
 import {
   apiBulkCourses,
-  courseRelatedApis,
   courseTypesApi,
-  coursesApi,
+  djangoCategoriesApi,
+  djangoCoursesApi,
+  djangoCoursesSlugApi,
+  djangoHighlightsApi,
+  djangoLearningPointsApi,
+  djangoLessonsApi,
+  djangoModulesApi,
+  djangoOutcomesApi,
+  djangoTagsApi,
+  djangoTypeCoursesApi,
+  djangoVideosApi,
   learningPathsApi,
-  lessonsApi,
-  modulesApi,
   optionsApi,
   questionsApi,
   quizzesApi,
-  videosApi,
 } from "@/lib/api/courses-api";
-import type {
-  Course,
-  CourseCreateInput,
-  CourseRelatedInput,
-  CourseRelatedKind,
-  CourseUpdateInput,
-  LearningPath,
-  Lesson,
-  LessonVideo,
-  Module,
-  Quiz,
-} from "@/lib/api/courses-api";
-
-type CourseLevel = Course["level"];
+import type { LearningPath, Quiz } from "@/lib/api/courses-api";
 
 import {
   apiBulkUsers,
@@ -306,7 +299,7 @@ export async function createCategoryAction(
 }
 
 export async function updateCategoryAction(
-  id: number,
+  id: string,
   fields: Partial<{ name: string; description: string | null; is_virtual: boolean; is_active: boolean }>
 ): Promise<ActionResult> {
   const token = await getAdminToken();
@@ -315,199 +308,16 @@ export async function updateCategoryAction(
   return { ok: result.ok, error: result.error ?? undefined };
 }
 
-export async function deleteCategoryAction(id: number): Promise<ActionResult> {
+export async function deleteCategoryAction(id: string): Promise<ActionResult> {
   const token = await getAdminToken();
   const result = await courseTypesApi.remove(token, id);
   if (result.ok) revalidatePath("/admin/categories");
   return { ok: result.ok, error: result.error ?? undefined };
 }
 
-function numNullable(formData: FormData, name: string): number | null {
-  const raw = String(formData.get(name) ?? "");
-  if (raw === "") return null;
-  return Number(raw);
-}
-
-function decimalOrZero(formData: FormData, name: string): string {
-  const raw = String(formData.get(name) ?? "");
-  return raw === "" ? "0" : raw;
-}
-
-export async function createCourseAction(
-  _prev: ActionResult,
-  formData: FormData
-): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const typeRaw = String(formData.get("type") ?? "");
-  const payload: CourseCreateInput = {
-    title: String(formData.get("title") ?? ""),
-    subtitle: String(formData.get("subtitle") ?? "") || null,
-    description: String(formData.get("description") ?? "") || null,
-    language: String(formData.get("language") ?? "en"),
-    level: String(formData.get("level") ?? "beginner") as CourseLevel,
-    instructor: String(formData.get("instructor") ?? ""),
-    duration_minutes: Number(formData.get("duration_minutes") ?? 0),
-    price: decimalOrZero(formData, "price"),
-    original_price: numNullable(formData, "original_price") !== null
-      ? String(formData.get("original_price") ?? "")
-      : null,
-    rating: numNullable(formData, "rating"),
-    review_count: Number(formData.get("review_count") ?? 0),
-    thumbnail: String(formData.get("thumbnail") ?? "") || null,
-    cohort_label: String(formData.get("cohort_label") ?? ""),
-    audience: String(formData.get("audience") ?? ""),
-    downloadable_files_count: Number(formData.get("downloadable_files_count") ?? 0),
-    type: typeRaw === "" ? null : Number(typeRaw),
-    is_active: boolField(formData, "is_active"),
-  };
-  const result = await coursesApi.create(token, payload);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export async function updateCourseAction(
-  id: number,
-  fields: CourseUpdateInput
-): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await coursesApi.update(token, id, fields);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export async function deleteCourseAction(id: number): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await coursesApi.remove(token, id);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-// --- course inline resources (mirrors the four Django admin inlines) ---
-
-export async function createCourseRelatedAction(
-  kind: CourseRelatedKind,
-  input: CourseRelatedInput
-): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const api = courseRelatedApis[kind];
-  const result = await api.create(token, input);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export async function updateCourseRelatedAction(
-  kind: CourseRelatedKind,
-  id: number,
-  input: CourseRelatedInput
-): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const api = courseRelatedApis[kind];
-  const result = await api.update(token, id, input);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export async function deleteCourseRelatedAction(
-  kind: CourseRelatedKind,
-  id: number
-): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const api = courseRelatedApis[kind];
-  const result = await api.remove(token, id);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-// --- curriculum: modules, lessons, and their one-to-one video ---
-// Slides count as one module; the server auto-slugs and stamps timestamps.
-
-export type ModuleInput = Pick<
-  Module,
-  "course" | "title" | "description" | "order" | "is_active"
->;
-
-export async function createModuleAction(input: ModuleInput): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await modulesApi.create(token, input);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export async function updateModuleAction(
-  id: number,
-  fields: Partial<ModuleInput>
-): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await modulesApi.update(token, id, fields);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export async function deleteModuleAction(id: number): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await modulesApi.remove(token, id);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export type LessonInput = Pick<
-  Lesson,
-  "module" | "lesson_type" | "title" | "description" | "order" | "is_active" | "duration_minutes"
->;
-
-export async function createLessonAction(input: LessonInput): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await lessonsApi.create(token, input);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export async function updateLessonAction(
-  id: number,
-  fields: Partial<LessonInput>
-): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await lessonsApi.update(token, id, fields);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export async function deleteLessonAction(id: number): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await lessonsApi.remove(token, id);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export type LessonVideoInput = Pick<LessonVideo, "lesson" | "url" | "duration_seconds">;
-
-export async function createVideoAction(input: LessonVideoInput): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await videosApi.create(token, input);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export async function updateVideoAction(
-  id: number,
-  fields: Partial<LessonVideoInput>
-): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await videosApi.update(token, id, fields);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
-export async function deleteVideoAction(id: number): Promise<ActionResult> {
-  const token = await getAdminToken();
-  const result = await videosApi.remove(token, id);
-  if (result.ok) revalidatePath("/admin/courses");
-  return { ok: result.ok, error: result.error ?? undefined };
-}
-
 // Attaches a quiz to a course or module through the polymorphic link.
 export async function updateQuizLinkAction(
-  id: number,
+  id: string,
   link: { content_type: number | null; object_id: number | null }
 ): Promise<ActionResult> {
   const token = await getAdminToken();
@@ -522,7 +332,7 @@ export async function updateQuizLinkAction(
 // --- quiz sub-resources (questions and their options) ---
 
 export async function createQuestionAction(
-  quizId: number,
+  quizId: string,
   text: string,
   order: number
 ): Promise<ActionResult> {
@@ -538,7 +348,7 @@ export async function createQuestionAction(
 }
 
 export async function updateQuestionAction(
-  id: number,
+  id: string,
   fields: { text: string; order: number; is_active: boolean }
 ): Promise<ActionResult> {
   const token = await getAdminToken();
@@ -547,7 +357,7 @@ export async function updateQuestionAction(
   return { ok: result.ok, error: result.error ?? undefined };
 }
 
-export async function deleteQuestionAction(id: number): Promise<ActionResult> {
+export async function deleteQuestionAction(id: string): Promise<ActionResult> {
   const token = await getAdminToken();
   const result = await questionsApi.remove(token, id);
   if (result.ok) revalidatePath("/admin/quizzes");
@@ -555,7 +365,7 @@ export async function deleteQuestionAction(id: number): Promise<ActionResult> {
 }
 
 export async function createOptionAction(
-  questionId: number,
+  questionId: string,
   text: string,
   order: number,
   isCorrect: boolean
@@ -572,7 +382,7 @@ export async function createOptionAction(
 }
 
 export async function updateOptionAction(
-  id: number,
+  id: string,
   fields: { text: string; order: number; is_correct: boolean }
 ): Promise<ActionResult> {
   const token = await getAdminToken();
@@ -581,7 +391,7 @@ export async function updateOptionAction(
   return { ok: result.ok, error: result.error ?? undefined };
 }
 
-export async function deleteOptionAction(id: number): Promise<ActionResult> {
+export async function deleteOptionAction(id: string): Promise<ActionResult> {
   const token = await getAdminToken();
   const result = await optionsApi.remove(token, id);
   if (result.ok) revalidatePath("/admin/quizzes");
@@ -603,14 +413,14 @@ export async function createLearningPathAction(
     includes_certificate: boolField(formData, "includes_certificate"),
     order: Number(formData.get("order") ?? 0),
     is_active: boolField(formData, "is_active"),
-    courses: formData.getAll("courses").map(Number),
+    courses: formData.getAll("courses").map(String),
   });
   if (result.ok) revalidatePath("/admin/learning-paths");
   return { ok: result.ok, error: result.error ?? undefined };
 }
 
 export async function updateLearningPathAction(
-  id: number,
+  id: string,
   fields: Partial<
     Pick<
       LearningPath,
@@ -633,7 +443,7 @@ export async function updateLearningPathAction(
   return { ok: result.ok, error: result.error ?? undefined };
 }
 
-export async function deleteLearningPathAction(id: number): Promise<ActionResult> {
+export async function deleteLearningPathAction(id: string): Promise<ActionResult> {
   const token = await getAdminToken();
   const result = await learningPathsApi.remove(token, id);
   if (result.ok) revalidatePath("/admin/learning-paths");
@@ -655,7 +465,7 @@ export async function createQuizAction(
   const result = await quizzesApi.create(token, {
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? "") || null,
-    type_quiz: typeRaw === "" ? null : Number(typeRaw),
+    type_quiz: typeRaw === "" ? null : typeRaw,
     is_active: boolField(formData, "is_active"),
     ...linkFields,
   });
@@ -664,7 +474,7 @@ export async function createQuizAction(
 }
 
 export async function updateQuizAction(
-  id: number,
+  id: string,
   fields: Partial<
     Pick<Quiz, "title" | "description" | "type_quiz" | "is_active" | "content_type" | "object_id">
   >
@@ -675,9 +485,469 @@ export async function updateQuizAction(
   return { ok: result.ok, error: result.error ?? undefined };
 }
 
-export async function deleteQuizAction(id: number): Promise<ActionResult> {
+export async function deleteQuizAction(id: string): Promise<ActionResult> {
   const token = await getAdminToken();
   const result = await quizzesApi.remove(token, id);
   if (result.ok) revalidatePath("/admin/quizzes");
   return { ok: result.ok, error: result.error ?? undefined };
+}
+
+// =========================================================================
+// Django model-aligned actions (UUID IDs, /api/ paths, correct field names)
+// =========================================================================
+
+export type DjangoActionResult = { ok: boolean; error?: string; data?: unknown };
+
+// --- Course Types ---
+
+export async function fetchDjangoCourseTypesAction(): Promise<{
+  ok: boolean;
+  data: { id: string; name: string; slug: string; description: string; is_virtual: boolean; is_active: boolean }[];
+}> {
+  const token = await getAdminToken();
+  const result = await djangoTypeCoursesApi.list(token);
+  return { ok: result.ok, data: (result.data ?? []) as never[] };
+}
+
+// --- Categories ---
+
+export async function fetchDjangoCategoriesAction(): Promise<{
+  ok: boolean;
+  data: { id: string; name: string; slug: string; description: string; parent: string | null; subcategories: unknown[]; is_active: boolean }[];
+}> {
+  const token = await getAdminToken();
+  const result = await djangoCategoriesApi.list(token);
+  return { ok: result.ok, data: (result.data ?? []) as never[] };
+}
+
+// --- Tags ---
+
+export async function fetchDjangoTagsAction(): Promise<{
+  ok: boolean;
+  data: { id: string; name: string; slug: string }[];
+}> {
+  const token = await getAdminToken();
+  const result = await djangoTagsApi.list(token);
+  return { ok: result.ok, data: (result.data ?? []) as never[] };
+}
+
+// --- Courses ---
+
+export async function createDjangoCourseAction(input: {
+  category: string;
+  title: string;
+  subtitle?: string;
+  description: string;
+  language?: string;
+  level?: string;
+  status?: string;
+  price: string;
+  discount_price?: string;
+  tags?: string[];
+  thumbnail?: string;
+  promo_video_url?: string;
+}): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoCoursesApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    data: result.data,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function updateDjangoCourseAction(
+  slug: string,
+  fields: Record<string, unknown>
+): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoCoursesSlugApi.update(token, slug, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function deleteDjangoCourseAction(slug: string): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoCoursesSlugApi.remove(token, slug);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+// --- Modules ---
+
+export async function createDjangoModuleAction(input: {
+  course: string;
+  title: string;
+  description?: string;
+  order: number;
+  is_published?: boolean;
+  is_free?: boolean;
+}): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoModulesApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    data: result.data,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function updateDjangoModuleAction(
+  id: string,
+  fields: Record<string, unknown>
+): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoModulesApi.update(token, id, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function deleteDjangoModuleAction(id: string): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoModulesApi.remove(token, id);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+// --- Lessons ---
+
+export async function createDjangoLessonAction(input: {
+  module: string;
+  title: string;
+  description?: string;
+  lesson_type?: string;
+  duration_in_minutes?: number;
+  order: number;
+  is_preview?: boolean;
+  is_published?: boolean;
+}): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoLessonsApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    data: result.data,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function updateDjangoLessonAction(
+  id: string,
+  fields: Record<string, unknown>
+): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoLessonsApi.update(token, id, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function deleteDjangoLessonAction(id: string): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoLessonsApi.remove(token, id);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+// --- Videos ---
+
+export async function createDjangoVideoAction(input: {
+  lesson: string;
+  title: string;
+  provider?: string;
+  video_url: string;
+  external_id?: string;
+  thumbnail_url?: string;
+  duration_in_seconds?: number;
+}): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoVideosApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    data: result.data,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function updateDjangoVideoAction(
+  id: string,
+  fields: Record<string, unknown>
+): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoVideosApi.update(token, id, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function deleteDjangoVideoAction(id: string): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoVideosApi.remove(token, id);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+// --- Outcomes ---
+
+export async function createDjangoOutcomeAction(input: {
+  course: string;
+  description: string;
+  category?: string;
+  icon?: string;
+  order: number;
+  is_highlighted?: boolean;
+  is_published?: boolean;
+}): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoOutcomesApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    data: result.data,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function updateDjangoOutcomeAction(
+  id: string,
+  fields: Record<string, unknown>
+): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoOutcomesApi.update(token, id, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function deleteDjangoOutcomeAction(id: string): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoOutcomesApi.remove(token, id);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+// --- Highlights ---
+
+export async function createDjangoHighlightAction(input: {
+  course: string;
+  title: string;
+  description?: string;
+  icon?: string;
+  order: number;
+  is_published?: boolean;
+}): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoHighlightsApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    data: result.data,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function updateDjangoHighlightAction(
+  id: string,
+  fields: Record<string, unknown>
+): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoHighlightsApi.update(token, id, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function deleteDjangoHighlightAction(id: string): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoHighlightsApi.remove(token, id);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+// --- Learning Points ---
+
+export async function createDjangoLearningPointAction(input: {
+  course: string;
+  title: string;
+  description?: string;
+  icon?: string;
+  order: number;
+  is_published?: boolean;
+}): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoLearningPointsApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    data: result.data,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function updateDjangoLearningPointAction(
+  id: string,
+  fields: Record<string, unknown>
+): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoLearningPointsApi.update(token, id, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function deleteDjangoLearningPointAction(id: string): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoLearningPointsApi.remove(token, id);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export type CourseRelatedData = {
+  outcomes: unknown[];
+  highlights: unknown[];
+  learningPoints: unknown[];
+  modules: unknown[];
+  lessons: unknown[];
+  videos: unknown[];
+};
+
+export async function fetchDjangoCourseRelatedDataAction(): Promise<{
+  ok: boolean;
+  data: CourseRelatedData | null;
+  error?: string;
+}> {
+  const token = await getAdminToken();
+  const [outcomes, highlights, learningPoints, modules, lessons, videos] =
+    await Promise.all([
+      djangoOutcomesApi.list(token),
+      djangoHighlightsApi.list(token),
+      djangoLearningPointsApi.list(token),
+      djangoModulesApi.list(token),
+      djangoLessonsApi.list(token),
+      djangoVideosApi.list(token),
+    ]);
+  if (
+    outcomes.ok &&
+    highlights.ok &&
+    learningPoints.ok &&
+    modules.ok &&
+    lessons.ok &&
+    videos.ok
+  ) {
+    return {
+      ok: true,
+      data: {
+        outcomes: outcomes.data ?? [],
+        highlights: highlights.data ?? [],
+        learningPoints: learningPoints.data ?? [],
+        modules: modules.data ?? [],
+        lessons: lessons.data ?? [],
+        videos: videos.data ?? [],
+      },
+    };
+  }
+  return { ok: false, data: null, error: "Failed to refresh course data" };
 }

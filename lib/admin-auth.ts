@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { COURSES_API_URL } from "./api/courses-api";
+import { SSO_API_URL } from "./sso";
 
 // Minimal shape returned by /api/users/me/ that the admin gate needs.
 export type AdminSession = {
@@ -14,13 +14,23 @@ export type AdminSession = {
 
 async function fetchMe(token: string): Promise<AdminSession | null> {
   try {
-    const res = await fetch(`${COURSES_API_URL}/api/users/me/`, {
+    const res = await fetch(`${SSO_API_URL}/api/users/me/`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
     if (!res.ok) return null;
     const data = await res.json();
-    return typeof data === "object" ? (data as AdminSession) : null;
+    if (typeof data !== "object" || data === null) return null;
+    // Map the SSO profile (name + roles[]) onto the legacy AdminSession shape.
+    const roles = Array.isArray(data.roles) ? data.roles : [];
+    return {
+      id: String(data.id ?? ""),
+      full_name: data.name ?? null,
+      display_name: data.name ?? null,
+      email: data.email ?? null,
+      role: roles[0] ?? "student",
+      is_staff: Boolean(data.is_staff),
+    };
   } catch {
     return null;
   }

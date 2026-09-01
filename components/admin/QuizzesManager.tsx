@@ -193,7 +193,7 @@ function OptionList({
   questionId,
   options,
 }: {
-  questionId: number;
+  questionId: string;
   options: QuizOption[];
 }) {
   const rows = options
@@ -269,7 +269,7 @@ function QuestionList({
   questions,
   options,
 }: {
-  quizId: number;
+  quizId: string;
   questions: QuizQuestion[];
   options: QuizOption[];
 }) {
@@ -277,7 +277,7 @@ function QuestionList({
     .filter((q) => q.quiz === quizId)
     .sort((a, b) => a.order - b.order);
   const [draft, setDraft] = useState("");
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   async function add() {
     const text = draft.trim();
@@ -380,7 +380,7 @@ function QuizEditPanel({
     await updateQuizAction(quiz.id, {
       title,
       description: description || null,
-      type_quiz: typeQuiz === "" ? null : Number(typeQuiz),
+      type_quiz: typeQuiz === "" ? null : typeQuiz,
       is_active: isActive,
     });
     const linkFields =

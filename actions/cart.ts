@@ -11,7 +11,7 @@ export async function addToCartAction(courseId: string, token?: string) {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch("http://127.0.0.1:8080/api/carts/add-item/", {
+    const response = await fetch("http://127.0.0.1:8000/api/carts/add-item/", {
       method: "POST",
       headers: headers,
       body: JSON.stringify({ course: courseId }),

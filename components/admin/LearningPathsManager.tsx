@@ -18,6 +18,23 @@ import type { Course, LearningPath } from "@/lib/api/courses-api";
 const inputClass =
   "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
 
+// Must match the learning-paths model ICON_CHOICES; the API rejects free text.
+const ICON_CHOICES = [
+  ["git", "Git"],
+  ["api", "API"],
+  ["sql", "SQL"],
+  ["cli", "Command line"],
+  ["docker", "Docker"],
+  ["data-viz", "Data visualization"],
+  ["testing", "Testing"],
+  ["security", "Security"],
+  ["backend", "Backend"],
+  ["frontend", "Frontend"],
+  ["data", "Data"],
+  ["cloud", "Cloud"],
+  ["mobile", "Mobile"],
+] as const;
+
 const columns: DataColumn<LearningPath>[] = [
   {
     key: "title",
@@ -62,10 +79,10 @@ function CoursePicker({
   onChange,
 }: {
   courses: Course[];
-  selected: number[];
-  onChange: (ids: number[]) => void;
+  selected: string[];
+  onChange: (ids: string[]) => void;
 }) {
-  function toggle(id: number) {
+  function toggle(id: string) {
     onChange(
       selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]
     );
@@ -80,12 +97,12 @@ function CoursePicker({
         <label key={course.id} className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={selected.includes(course.id)}
-            onChange={() => toggle(course.id)}
+            checked={selected.includes(course.slug)}
+            onChange={() => toggle(course.slug)}
           />
           <span className="text-foreground">
             {course.title}
-            <span className="ml-1 text-xs text-muted-foreground">(#{course.id})</span>
+            <span className="ml-1 text-xs text-muted-foreground">(#{course.slug})</span>
           </span>
         </label>
       ))}
@@ -115,7 +132,12 @@ function LearningPathForm({ courses }: { courses: Course[] }) {
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-foreground">Icon</label>
-          <input name="icon" placeholder="rocket" className={inputClass} />
+          <select name="icon" defaultValue="" className={inputClass}>
+            <option value="">None</option>
+            {ICON_CHOICES.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-foreground">Pace</label>
@@ -156,10 +178,10 @@ function LearningPathForm({ courses }: { courses: Course[] }) {
           ) : (
             courses.map((course) => (
               <label key={course.id} className="flex items-center gap-2 py-0.5 text-sm">
-                <input type="checkbox" name="courses" value={course.id} />
+                <input type="checkbox" name="courses" value={course.slug} />
                 <span className="text-foreground">
                   {course.title}
-                  <span className="ml-1 text-xs text-muted-foreground">(#{course.id})</span>
+                  <span className="ml-1 text-xs text-muted-foreground">(#{course.slug})</span>
                 </span>
               </label>
             ))
@@ -192,7 +214,7 @@ function LearningPathEditPanel({
     order: path.order,
     is_active: path.is_active,
   });
-  const [selectedCourses, setSelectedCourses] = useState<number[]>(path.courses);
+  const [selectedCourses, setSelectedCourses] = useState<string[]>(path.courses);
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -239,7 +261,16 @@ function LearningPathEditPanel({
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-foreground">Icon</label>
-          <input value={fields.icon} onChange={(e) => setFields({ ...fields, icon: e.target.value })} className={inputClass} />
+          <select
+            value={fields.icon}
+            onChange={(e) => setFields({ ...fields, icon: e.target.value })}
+            className={inputClass}
+          >
+            <option value="">None</option>
+            {ICON_CHOICES.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-foreground">Pace</label>

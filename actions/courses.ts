@@ -64,7 +64,7 @@ export interface CourseWithEnrollment extends Course {
 export async function getPopularCourses(limit?: number): Promise<CourseWithEnrollment[]> {
   try {
     // 1. Appel API à votre backend
-    const response = await fetch('http://127.0.0.1:8080/api/courses/', {
+    const response = await fetch('http://127.0.0.1:8000/api/courses/', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
