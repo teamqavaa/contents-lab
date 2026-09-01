@@ -1,4 +1,4 @@
-// components/header/Header.tsx
+// components/header/Header.tsx (App A)
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,23 +13,32 @@ export default function Header() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem("app_a_token");
-      setIsAuthenticated(!!token);
-      setIsLoading(false);
+    const checkAuth = async () => {
+      try {
+        // Interroge l'API qui lit le cookie HttpOnly
+        const res = await fetch("/api/auth/me");
+        if (res.ok) {
+          const data = await res.json();
+          setIsAuthenticated(data.authenticated);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error("Erreur de vérification de la session :", error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     // Vérification initiale
     checkAuth();
 
-    // Écoute de l'événement personnalisé déclenché dans la même fenêtre
+    // Écoute des événements de changement de session
     window.addEventListener("authChange", checkAuth);
-    // Écoute des modifications depuis d'autres onglets
-    window.addEventListener("storage", checkAuth);
 
     return () => {
       window.removeEventListener("authChange", checkAuth);
-      window.removeEventListener("storage", checkAuth);
     };
   }, []);
 

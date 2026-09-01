@@ -4,8 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { getPopularCourses } from '@/actions/courses';
-import { addToCartAction } from '@/actions/cart';
-import { Loader2, ArrowRight } from 'lucide-react';
+import { getMyCart } from '@/actions/cart';
+import AddToCartButton from './AddToCartButton';
 
 interface Course {
   id: string;
@@ -21,17 +21,28 @@ interface Course {
 
 export default function MostPopularCard() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [cartCourseIds, setCartCourseIds] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   const [isPaused, setIsPaused] = useState(false);
 
-  // Cart state management
-  const [addingCourseId, setAddingCourseId] = useState<string | null>(null);
-  const [addedCourseIds, setAddedCourseIds] = useState<Record<string, boolean>>({});
+  const fetchCartData = async () => {
+    try {
+      const cart = await getMyCart();
+      if (cart && cart.items) {
+        const ids = new Set(
+          cart.items.map((item: any) => item.course_details?.id || item.course || item.id)
+        );
+        setCartCourseIds(ids);
+      }
+    } catch (err) {
+      console.error('Error fetching cart:', err);
+    }
+  };
 
   useEffect(() => {
-    async function fetchCourses() {
+    async function fetchData() {
       try {
         setIsLoading(true);
         const data = await getPopularCourses(3);
@@ -49,14 +60,20 @@ export default function MostPopularCard() {
         }));
 
         setCourses(mappedCourses);
+        await fetchCartData();
       } catch (error) {
-        console.error('Error loading popular courses:', error);
+        console.error('Error loading data:', error);
       } finally {
         setIsLoading(false);
       }
     }
 
-    fetchCourses();
+    fetchData();
+
+    window.addEventListener('cartUpdate', fetchCartData);
+    return () => {
+      window.removeEventListener('cartUpdate', fetchCartData);
+    };
   }, []);
 
   const currentCourse = courses[currentIndex];
@@ -73,30 +90,6 @@ export default function MostPopularCard() {
 
   const toggleFavorite = (id: string) => {
     setFavorites((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  // Add to cart handler
-  const handleAddToCart = async (courseId: string) => {
-    try {
-      setAddingCourseId(courseId);
-      const token = localStorage.getItem('app_a_token') || undefined;
-
-      const result = await addToCartAction(courseId, token);
-
-      if (result.success) {
-        // Mark this course as added permanently in state
-        setAddedCourseIds((prev) => ({ ...prev, [courseId]: true }));
-
-        // Dispatch event to update cart count in Header
-        window.dispatchEvent(new Event('cartUpdate'));
-      } else {
-        console.error('Failed to add to cart:', result.error);
-      }
-    } catch (err) {
-      console.error('Error adding to cart:', err);
-    } finally {
-      setAddingCourseId(null);
-    }
   };
 
   useEffect(() => {
@@ -117,12 +110,11 @@ export default function MostPopularCard() {
     );
   }
 
-  if (courses.length === 0) {
+  if (courses.length === 0 || !currentCourse) {
     return null;
   }
 
-  const isAdding = addingCourseId === currentCourse?.id;
-  const isAdded = !!addedCourseIds[currentCourse?.id];
+  const isInCart = cartCourseIds.has(currentCourse.id);
 
   return (
     <section className="w-full bg-[#f8fafc] py-8 px-4 sm:px-6 lg:px-8">
@@ -237,32 +229,12 @@ export default function MostPopularCard() {
                     Learn More
                   </Link>
 
-                  {/* Dynamic Button: Add To Cart or View Cart */}
-                  {isAdded ? (
-                    <Link
-                      href="/cart"
-                      className="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-1.5 shadow-2xs"
-                    >
-                      <span>View Cart</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={isAdding}
-                      onClick={() => handleAddToCart(currentCourse.id)}
-                      className="px-4 py-2 bg-blue-400 text-white text-xs font-bold rounded-lg hover:bg-blue-500 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer disabled:cursor-not-allowed"
-                    >
-                      {isAdding ? (
-                        <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          <span>Adding...</span>
-                        </>
-                      ) : (
-                        <span>Add To Cart</span>
-                      )}
-                    </button>
-                  )}
+                  {/* La clé force le re-render du composant et initialInCart transmet l'état exact */}
+                  <AddToCartButton
+                    key={currentCourse.id}
+                    courseId={currentCourse.id}
+                    initialInCart={isInCart}
+                  />
                 </div>
 
               </div>
