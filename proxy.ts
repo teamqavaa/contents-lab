@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PROTECTED_ROUTES = ['/dashboard', '/cart', '/settings', '/checkout'];
+const PROTECTED_ROUTES = ['/dashboard', '/cart', '/settings', '/checkout', '/qavaa', '/profile', '/orders', '/account', '/payment'];
 
 export default function proxy(request: NextRequest) {
   // On lit le cookie "access_token" que vous posez réellement dans le callback
