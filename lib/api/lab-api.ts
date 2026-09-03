@@ -2,6 +2,7 @@
 // carries the SSO access token from the httpOnly cookie; the backend rejects
 // non-staff.
 import { COURSES_API_URL } from "./courses-api";
+import { LABS_API_URL } from "./labs-api";
 
 type ApiResult<T> = {
   ok: boolean;
@@ -16,10 +17,11 @@ type ApiResult<T> = {
 async function adminFetch<T>(
   token: string,
   path: string,
-  init?: RequestInit
+  init?: RequestInit,
+  baseUrl: string = COURSES_API_URL
 ): Promise<ApiResult<T>> {
   try {
-    const res = await fetch(`${COURSES_API_URL}${path}`, {
+    const res = await fetch(`${baseUrl}${path}`, {
       ...init,
       headers: {
         "Content-Type": "application/json",
@@ -133,58 +135,58 @@ export async function apiBulkUsers(
 }
 
 export async function apiListSkills(token: string) {
-  return adminFetch<Skill[]>(token, "/api/admin/skills/");
+  return adminFetch<Skill[]>(token, "/api/admin/skills/", undefined, LABS_API_URL);
 }
 
 export async function apiCreateSkill(token: string, payload: Partial<Skill>) {
   return adminFetch<Skill>(token, "/api/admin/skills/", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }, LABS_API_URL);
 }
 
 export async function apiUpdateSkill(token: string, id: string, payload: Partial<Skill>) {
   return adminFetch<Skill>(token, `/api/admin/skills/${id}/`, {
     method: "PATCH",
     body: JSON.stringify(payload),
-  });
+  }, LABS_API_URL);
 }
 
 export async function apiDeleteSkill(token: string, id: string) {
-  return adminFetch<void>(token, `/api/admin/skills/${id}/`, { method: "DELETE" });
+  return adminFetch<void>(token, `/api/admin/skills/${id}/`, { method: "DELETE" }, LABS_API_URL);
 }
 
 export async function apiListLabs(token: string) {
-  return adminFetch<Lab[]>(token, "/api/admin/labs/");
+  return adminFetch<Lab[]>(token, "/api/admin/labs/", undefined, LABS_API_URL);
 }
 
 export async function apiCreateLab(token: string, payload: Partial<Lab>) {
   return adminFetch<Lab>(token, "/api/admin/labs/", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }, LABS_API_URL);
 }
 
 export async function apiUpdateLab(token: string, id: string, payload: Partial<Lab>) {
   return adminFetch<Lab>(token, `/api/admin/labs/${id}/`, {
     method: "PATCH",
     body: JSON.stringify(payload),
-  });
+  }, LABS_API_URL);
 }
 
 export async function apiDeleteLab(token: string, id: string) {
-  return adminFetch<void>(token, `/api/admin/labs/${id}/`, { method: "DELETE" });
+  return adminFetch<void>(token, `/api/admin/labs/${id}/`, { method: "DELETE" }, LABS_API_URL);
 }
 
 export async function apiListObjectives(token: string, labId: string) {
-  return adminFetch<LabObjective[]>(token, `/api/admin/labs/${labId}/objectives/`);
+  return adminFetch<LabObjective[]>(token, `/api/admin/labs/${labId}/objectives/`, undefined, LABS_API_URL);
 }
 
 export async function apiCreateObjective(token: string, labId: string, payload: Partial<LabObjective>) {
   return adminFetch<LabObjective>(token, `/api/admin/labs/${labId}/objectives/`, {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }, LABS_API_URL);
 }
 
 export async function apiUpdateObjective(
@@ -196,13 +198,13 @@ export async function apiUpdateObjective(
   return adminFetch<LabObjective>(token, `/api/admin/labs/${labId}/objectives/${objectiveId}/`, {
     method: "PATCH",
     body: JSON.stringify(payload),
-  });
+  }, LABS_API_URL);
 }
 
 export async function apiDeleteObjective(token: string, labId: string, objectiveId: string) {
   return adminFetch<void>(token, `/api/admin/labs/${labId}/objectives/${objectiveId}/`, {
     method: "DELETE",
-  });
+  }, LABS_API_URL);
 }
 
 export async function apiListUsers(token: string, role?: string) {
