@@ -19,10 +19,14 @@ async function adminFetch<T>(
   init?: RequestInit
 ): Promise<ApiResult<T>> {
   try {
+    const reqBody = init?.body;
+    const isMultipart = typeof FormData !== "undefined" && reqBody instanceof FormData;
     const res = await fetch(`${COURSES_API_URL}${path}`, {
       ...init,
       headers: {
-        "Content-Type": "application/json",
+        // For multipart/form-data the browser sets the Content-Type
+        // (including the boundary) automatically, so we must not force JSON.
+        ...(isMultipart ? {} : { "Content-Type": "application/json" }),
         Authorization: `Bearer ${token}`,
         ...(init?.headers ?? {}),
       },
@@ -492,6 +496,16 @@ function djangoCrud<T>(basePath: string) {
         method: "PATCH",
         body: JSON.stringify(payload),
       }),
+    createMultipart: (token: string, form: FormData) =>
+      adminFetch<T>(token, basePath, {
+        method: "POST",
+        body: form,
+      }),
+    updateMultipart: (token: string, id: string, form: FormData) =>
+      adminFetch<T>(token, `${basePath}${id}/`, {
+        method: "PATCH",
+        body: form,
+      }),
     remove: (token: string, id: string) =>
       adminFetch<void>(token, `${basePath}${id}/`, { method: "DELETE" }),
   };
@@ -515,6 +529,11 @@ export const djangoCoursesSlugApi = {
     adminFetch<DjangoCourse>(token, `/api/courses/${slug}/`, {
       method: "PATCH",
       body: JSON.stringify(payload),
+    }),
+  updateMultipart: (token: string, slug: string, form: FormData) =>
+    adminFetch<DjangoCourse>(token, `/api/courses/${slug}/`, {
+      method: "PATCH",
+      body: form,
     }),
   remove: (token: string, slug: string) =>
     adminFetch<void>(token, `/api/courses/${slug}/`, { method: "DELETE" }),

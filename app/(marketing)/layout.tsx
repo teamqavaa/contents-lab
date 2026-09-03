@@ -1,4 +1,5 @@
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/footer/Footer";
 
 export default function MarketingLayout({
   children,
@@ -8,7 +9,8 @@ export default function MarketingLayout({
   return (
     <>
       <Navbar />
-      {children}
+      <main className="flex flex-1 flex-col">{children}</main>
+      <Footer />
     </>
   );
 }

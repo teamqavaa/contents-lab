@@ -545,10 +545,31 @@ export async function createDjangoCourseAction(input: {
   discount_price?: string;
   tags?: string[];
   thumbnail?: string;
+  thumbnailFile?: File | null;
   promo_video_url?: string;
 }): Promise<DjangoActionResult> {
   const token = await getAdminToken();
-  const result = await djangoCoursesApi.create(token, input);
+  let result: Awaited<ReturnType<typeof djangoCoursesApi.create>>;
+  if (input.thumbnailFile) {
+    const form = new FormData();
+    form.set("category", input.category);
+    form.set("title", input.title);
+    if (input.subtitle) form.set("subtitle", input.subtitle);
+    form.set("description", input.description);
+    if (input.language) form.set("language", input.language);
+    if (input.level) form.set("level", input.level);
+    if (input.status) form.set("status", input.status);
+    form.set("price", input.price ?? "0");
+    form.set("discount_price", input.discount_price ?? "0");
+    if (input.tags) {
+      for (const t of input.tags) form.append("tags", t);
+    }
+    form.set("thumbnail", input.thumbnailFile);
+    if (input.promo_video_url) form.set("promo_video_url", input.promo_video_url);
+    result = await djangoCoursesApi.createMultipart(token, form);
+  } else {
+    result = await djangoCoursesApi.create(token, input);
+  }
   if (result.ok) revalidatePath("/admin/courses");
   const detail = result.detail as Record<string, string[]> | null;
   return {
@@ -565,10 +586,25 @@ export async function createDjangoCourseAction(input: {
 
 export async function updateDjangoCourseAction(
   slug: string,
-  fields: Record<string, unknown>
+  fields: Record<string, unknown>,
+  thumbnailFile?: File | null
 ): Promise<DjangoActionResult> {
   const token = await getAdminToken();
-  const result = await djangoCoursesSlugApi.update(token, slug, fields);
+  let result: Awaited<ReturnType<typeof djangoCoursesSlugApi.update>>;
+  if (thumbnailFile) {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(fields)) {
+      if (Array.isArray(value)) {
+        for (const item of value) form.append(key, String(item));
+      } else if (value !== null && value !== undefined) {
+        form.set(key, String(value));
+      }
+    }
+    form.set("thumbnail", thumbnailFile);
+    result = await djangoCoursesSlugApi.updateMultipart(token, slug, form);
+  } else {
+    result = await djangoCoursesSlugApi.update(token, slug, fields);
+  }
   if (result.ok) revalidatePath("/admin/courses");
   const detail = result.detail as Record<string, string[]> | null;
   return {

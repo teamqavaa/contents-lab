@@ -105,6 +105,7 @@ const initialCourseInfo: CourseInfoValues = {
   discount_price: "0",
   tags: [],
   thumbnail: "",
+  thumbnailFile: null,
   promo_video_url: "",
 };
 
@@ -154,6 +155,9 @@ export function CoursesManager({
   const [editingCourse, setEditingCourse] = useState<DjangoCourse | null>(null);
   const [editFields, setEditFields] = useState<CourseEditFields | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editThumbMode, setEditThumbMode] = useState<"link" | "upload">("link");
+  const [editThumbFile, setEditThumbFile] = useState<File | null>(null);
+  const [editThumbPreview, setEditThumbPreview] = useState<string | null>(null);
 
   // Step 3 related data (kept locally so newly added items show immediately)
   const [related, setRelated] = useState<{
@@ -190,6 +194,32 @@ export function CoursesManager({
   async function handleCreateCourse(values: CourseInfoValues) {
     setCreating(true);
     setCreateError(null);
+
+    if (createdCourse) {
+      const res = await updateDjangoCourseAction(createdCourse.slug, {
+        category: values.category,
+        title: values.title.trim(),
+        subtitle: values.subtitle.trim() || null,
+        description: values.description.trim(),
+        language: values.language,
+        level: values.level,
+        status: values.status,
+        price: values.price || "0",
+        discount_price: values.discount_price || "0",
+        tags: values.tags,
+        thumbnail: values.thumbnail.trim() || null,
+        thumbnailFile: values.thumbnailFile ?? null,
+        promo_video_url: values.promo_video_url.trim() || null,
+      });
+      setCreating(false);
+      if (res.ok) {
+        setStep(3);
+      } else {
+        setCreateError(res.error ?? "Failed to update course");
+      }
+      return;
+    }
+
     const res = await createDjangoCourseAction({
       category: values.category,
       title: values.title.trim(),
@@ -202,6 +232,7 @@ export function CoursesManager({
       discount_price: values.discount_price || "0",
       tags: values.tags,
       thumbnail: values.thumbnail.trim() || undefined,
+      thumbnailFile: values.thumbnailFile ?? null,
       promo_video_url: values.promo_video_url.trim() || undefined,
     });
     setCreating(false);
@@ -242,12 +273,15 @@ export function CoursesManager({
       thumbnail: c.thumbnail ?? "",
       promo_video_url: c.promo_video_url ?? "",
     });
+    setEditThumbMode(c.thumbnail ? "link" : "upload");
+    setEditThumbFile(null);
+    setEditThumbPreview(null);
   }
 
   async function saveEdit() {
     if (!editingCourse || !editFields) return;
     setSavingEdit(true);
-    await updateDjangoCourseAction(editingCourse.slug, {
+    const fields: Record<string, unknown> = {
       title: editFields.title ?? "",
       subtitle: editFields.subtitle ?? "",
       description: editFields.description ?? "",
@@ -259,7 +293,12 @@ export function CoursesManager({
       discount_price: editFields.discount_price ?? "0",
       thumbnail: editFields.thumbnail ?? null,
       promo_video_url: editFields.promo_video_url ?? null,
-    });
+    };
+    await updateDjangoCourseAction(
+      editingCourse.slug,
+      fields,
+      editThumbFile ?? null
+    );
     setSavingEdit(false);
     window.location.reload();
   }
@@ -427,12 +466,64 @@ export function CoursesManager({
                 className={inputClass}
               />
             </Field>
-            <Field label="Thumbnail URL">
-              <input
-                value={f.thumbnail ?? ""}
-                onChange={(e) => set("thumbnail", e.target.value)}
-                className={inputClass}
-              />
+            <Field label="Thumbnail">
+              <div className="space-y-2">
+                <div className="inline-flex rounded-md border border-input bg-muted p-0.5">
+                  {(["upload", "link"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        setEditThumbMode(m);
+                        setEditThumbFile(null);
+                        setEditThumbPreview(null);
+                        if (m === "upload") set("thumbnail", "");
+                      }}
+                      className={`rounded px-3 py-1 text-xs font-medium transition ${
+                        editThumbMode === m
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {m === "upload" ? "Upload image" : "Image link"}
+                    </button>
+                  ))}
+                </div>
+
+                {editThumbMode === "link" ? (
+                  <input
+                    value={f.thumbnail ?? ""}
+                    onChange={(e) => set("thumbnail", e.target.value)}
+                    className={inputClass}
+                  />
+                ) : (
+                  <div className="space-y-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0] ?? null;
+                        setEditThumbFile(file);
+                        if (file) {
+                          setEditThumbPreview(URL.createObjectURL(file));
+                          set("thumbnail", "");
+                        } else {
+                          setEditThumbPreview(null);
+                        }
+                      }}
+                      className="block w-full text-xs text-muted-foreground file:mr-3 file:h-9 file:rounded-md file:border-0 file:bg-muted file:px-3 file:text-sm file:text-foreground"
+                    />
+                    {editThumbPreview && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={editThumbPreview}
+                        alt="Thumbnail preview"
+                        className="h-24 w-full rounded-md border border-border object-cover"
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
             </Field>
             <Field label="Promo video URL">
               <input

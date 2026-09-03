@@ -58,6 +58,7 @@ export type CourseInfoValues = {
   tags: string[];
   thumbnail: string;
   promo_video_url: string;
+  thumbnailFile?: File | null;
 };
 
 export function CourseInfoStep({
@@ -75,6 +76,11 @@ export function CourseInfoStep({
 }) {
   const [v, setV] = useState<CourseInfoValues>(initial);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [thumbMode, setThumbMode] = useState<"link" | "upload">(
+    initial.thumbnail ? "link" : "upload"
+  );
+  const [thumbFile, setThumbFile] = useState<File | null>(null);
+  const [thumbPreview, setThumbPreview] = useState<string | null>(null);
 
   function set<K extends keyof CourseInfoValues>(k: K, val: CourseInfoValues[K]) {
     setV((p) => ({ ...p, [k]: val }));
@@ -96,7 +102,30 @@ export function CourseInfoStep({
   }
 
   function handleNext() {
-    if (validate()) onNext(v);
+    if (validate()) onNext({ ...v, thumbnailFile: thumbFile });
+  }
+
+  function handleThumbFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    setThumbFile(file);
+    if (file) {
+      setThumbPreview(URL.createObjectURL(file));
+      set("thumbnail", "");
+    } else {
+      setThumbPreview(null);
+    }
+  }
+
+  function switchThumbMode(mode: "link" | "upload") {
+    setThumbMode(mode);
+    if (mode === "upload") {
+      setThumbFile(null);
+      setThumbPreview(null);
+      set("thumbnail", "");
+    } else {
+      setThumbFile(null);
+      setThumbPreview(null);
+    }
   }
 
   function toggleTag(tagId: string) {
@@ -226,13 +255,51 @@ export function CourseInfoStep({
           )}
         </Field>
 
-        <Field label="Thumbnail URL">
-          <input
-            value={v.thumbnail}
-            onChange={(e) => set("thumbnail", e.target.value)}
-            placeholder="https://..."
-            className={inputClass}
-          />
+        <Field label="Thumbnail">
+          <div className="space-y-2">
+            <div className="inline-flex rounded-md border border-input bg-muted p-0.5">
+              {(["upload", "link"] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => switchThumbMode(m)}
+                  className={`rounded px-3 py-1 text-xs font-medium transition ${
+                    thumbMode === m
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {m === "upload" ? "Upload image" : "Image link"}
+                </button>
+              ))}
+            </div>
+
+            {thumbMode === "link" ? (
+              <input
+                value={v.thumbnail}
+                onChange={(e) => set("thumbnail", e.target.value)}
+                placeholder="https://..."
+                className={inputClass}
+              />
+            ) : (
+              <div className="space-y-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleThumbFileChange}
+                  className="block w-full text-xs text-muted-foreground file:mr-3 file:h-9 file:rounded-md file:border-0 file:bg-muted file:px-3 file:text-sm file:text-foreground"
+                />
+                {thumbPreview && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={thumbPreview}
+                    alt="Thumbnail preview"
+                    className="h-24 w-full rounded-md border border-border object-cover"
+                  />
+                )}
+              </div>
+            )}
+          </div>
         </Field>
 
         <Field label="Promo video URL">
