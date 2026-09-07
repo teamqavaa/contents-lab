@@ -131,7 +131,7 @@ export async function apiBulkUsers(
   return adminFetch<BulkUsersResult>(token, "/api/admin/users/bulk/", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }, LABS_API_URL);
 }
 
 export async function apiListSkills(token: string) {
@@ -209,19 +209,19 @@ export async function apiDeleteObjective(token: string, labId: string, objective
 
 export async function apiListUsers(token: string, role?: string) {
   const query = role ? `?role=${encodeURIComponent(role)}` : "";
-  return adminFetch<AdminUser[]>(token, `/api/admin/users/${query}`);
+  return adminFetch<AdminUser[]>(token, `/api/admin/users/${query}`, undefined, LABS_API_URL);
 }
 
 export async function apiCreateUser(token: string, payload: AdminUserCreateInput) {
   return adminFetch<AdminUser>(token, "/api/admin/users/", {
     method: "POST",
     body: JSON.stringify(payload),
-  });
+  }, LABS_API_URL);
 }
 
 export async function apiUpdateUser(token: string, id: string, payload: Partial<AdminUser>) {
   return adminFetch<AdminUser>(token, `/api/admin/users/${id}/`, {
     method: "PATCH",
     body: JSON.stringify(payload),
-  });
+  }, LABS_API_URL);
 }
