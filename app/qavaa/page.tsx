@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PartyPopper, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
+import { getOrderDetails } from "@/actions/checkout"; // Importez la Server Action
 
 interface OrderItem {
   id: string;
@@ -32,16 +33,14 @@ export default function QavaaSuccessPage() {
       return;
     }
 
-    async function fetchOrderDetails() {
+    async function fetchOrder() {
       try {
-        const res = await fetch(`http://127.0.0.1:8080/api/orders/${orderId}/`, {
-          headers: {
-            // Add your authentication token if necessary
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setOrder(data);
+        const result = await getOrderDetails(orderId as string);
+
+        if (result.success && result.data) {
+          setOrder(result.data);
+        } else {
+          console.error("Erreur de récupération :", result.error);
         }
       } catch (err) {
         console.error("Error loading order", err);
@@ -50,7 +49,7 @@ export default function QavaaSuccessPage() {
       }
     }
 
-    fetchOrderDetails();
+    fetchOrder();
   }, [orderId]);
 
   return (
@@ -95,7 +94,7 @@ export default function QavaaSuccessPage() {
                   className="flex items-center justify-between p-3 bg-white rounded-lg border border-neutral-200"
                 >
                   <span className="text-sm font-semibold text-neutral-800">
-                    {item.course.title}
+                    {item.course?.title || "Cours sans titre"}
                   </span>
                   <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
                 </div>

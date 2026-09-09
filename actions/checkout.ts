@@ -100,3 +100,48 @@ export async function initiatePayment(formData: FormData) {
     return { error: err.message || "An unexpected error occurred." };
   }
 }
+
+export async function getOrderDetails(orderId: string) {
+  if (!orderId) {
+    return { success: false, error: "Identifiant de commande manquant." };
+  }
+
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("access_token")?.value;
+
+    if (!token) {
+      return { success: false, error: "Utilisateur non authentifié." };
+    }
+
+    const CART_API_URL = process.env.NEXT_PUBLIC_CART_API_URL || "http://127.0.0.1:8080";
+
+    const response = await fetch(`${CART_API_URL}/api/orders/${orderId}/`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        Cookie: `access_token=${token}`,
+      },
+      cache: "no-store",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.detail || "Impossible de récupérer les détails de la commande.",
+      };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    console.error("Erreur dans getOrderDetails:", error);
+    return {
+      success: false,
+      error: "Erreur serveur lors de la récupération de la commande.",
+    };
+  }
+}
+

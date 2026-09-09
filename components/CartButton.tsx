@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
-import { CartResponse, getMyCart } from '@/actions/cart';
+import { getMyCart } from '@/actions/cart';
 
 interface CartButtonProps {
   initialCount?: number;
@@ -13,12 +13,15 @@ export default function CartButton({ initialCount = 0 }: CartButtonProps) {
   const [cartCount, setCartCount] = useState<number>(initialCount);
 
   const fetchCartData = async () => {
-    const cartData = await getMyCart();
-
-    if (cartData) {
-      const count = Number(cartData.items_count) || cartData.items?.length || 0;
-      setCartCount(count);
-    } else {
+    try {
+      const cartData = await getMyCart();
+      if (cartData) {
+        const count = Number(cartData.items_count) || cartData.items?.length || 0;
+        setCartCount(count);
+      } else {
+        setCartCount(0);
+      }
+    } catch {
       setCartCount(0);
     }
   };
@@ -26,6 +29,7 @@ export default function CartButton({ initialCount = 0 }: CartButtonProps) {
   useEffect(() => {
     fetchCartData();
 
+    // Écoute l'événement 'cartUpdate' émis lors d'un ajout ou d'une suppression
     const handleCartUpdate = () => fetchCartData();
     window.addEventListener('cartUpdate', handleCartUpdate);
 

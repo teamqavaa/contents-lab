@@ -32,13 +32,13 @@ export default function CtaSection() {
 
             {/* Description */}
             <p className="text-neutral-400 text-base md:text-lg font-normal leading-relaxed max-w-2xl">
-              Eight weeks of hands-on labs, mentor reviews and a project you defend in public. Seats for Cohort 04 are limited.
+              Ignite Your Future Tech Fair 2026 marks the fourth consecutive edition of QAVAA Innovate's flagship international technology event.
             </p>
 
             {/* Bouton d'Action */}
             <div className="mt-2">
               <Link
-                href="/signup"
+                href="https://www.ready2ignite.com/#/buyTickets/selectTickets?lang=en"
                 className="inline-flex items-center justify-center bg-white text-black hover:bg-neutral-200 font-semibold text-sm py-4 px-8 rounded-full transition-all duration-200 transform hover:scale-[1.02]"
               >
                 Sign Up Free

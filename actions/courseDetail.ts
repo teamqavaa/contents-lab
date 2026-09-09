@@ -1,5 +1,8 @@
 'use server';
 
+import { cookies } from 'next/headers';
+import { getMyCart } from './cart';
+
 export interface ApiCategory {
   id: string;
   name: string;
@@ -39,14 +42,24 @@ export interface CourseDetails {
   who_this_is_for: string;
   learning_outcomes: string[];
   what_is_included: string[];
+  is_enrolled: boolean; // <-- Ajouté
 }
 
 export async function getCourseDetails(slug: string): Promise<CourseDetails | null> {
   try {
-    const response = await fetch(`http://127.0.0.1:8080/api/courses/${slug}/`, {
+    const cookieStore = await cookies();
+    const token = cookieStore.get('access_token')?.value;
+
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8080';
+
+    const response = await fetch(`${API_URL}/api/courses/${slug}/`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? {
+          'Authorization': `Bearer ${token}`,
+          'Cookie': `access_token=${token}`
+        } : {}),
       },
       cache: 'no-store',
     });
@@ -109,9 +122,18 @@ export async function getCourseDetails(slug: string): Promise<CourseDetails | nu
         'Private community access',
         'Lifetime access, all updates',
       ],
+      is_enrolled: data.is_enrolled ?? false, // <-- Récupéré directement de l'API
     };
   } catch (error) {
     console.error('Erreur getCourseDetails:', error);
     return null;
   }
 }
+
+
+
+
+
+
+
+

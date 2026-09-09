@@ -1,5 +1,7 @@
 'use server';
 
+import { getMyEnrolledCourses } from "./cart";
+
 // Interface représentant la réponse exacte de votre API Django / REST
 export interface ApiCategory {
   id: string;
@@ -63,13 +65,14 @@ export interface CourseWithEnrollment extends Course {
  */
 export async function getPopularCourses(limit?: number): Promise<CourseWithEnrollment[]> {
   try {
-    // 1. Appel API à votre backend
-    const response = await fetch('http://127.0.0.1:8080/api/courses/', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // 1. Récupérer en parallèle les cours et les vraies inscriptions de l'utilisateur connecté
+    const [response, enrolledCourses] = await Promise.all([
+      fetch('http://127.0.0.1:8080/api/courses/', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      }),
+      getMyEnrolledCourses().catch(() => [])
+    ]);
 
     if (!response.ok) {
       throw new Error(`Erreur lors de la récupération des cours: ${response.statusText}`);
@@ -77,8 +80,11 @@ export async function getPopularCourses(limit?: number): Promise<CourseWithEnrol
 
     const apiCourses: ApiCourse[] = await response.json();
 
-    // 2. Mock des IDs de cours auxquels le user est déjà inscrit
-    const enrolledCourseIds = new Set(['3ba19122-bdda-4265-9e43-35be1261125e']);
+    // 2. Extraire dynamiquement les IDs des cours où l'utilisateur est inscrit
+    const enrollmentsList = Array.isArray(enrolledCourses) ? enrolledCourses : (enrolledCourses?.results || []);
+    const enrolledCourseIds = new Set(
+      enrollmentsList.map((course: any) => course.id || course.course_id || course.course?.id)
+    );
 
     // 3. Tri par popularité
     const sortedCourses = apiCourses.sort((a, b) => b.total_students - a.total_students);
@@ -118,5 +124,8 @@ export async function getPopularCourses(limit?: number): Promise<CourseWithEnrol
     return [];
   }
 }
+
+
+
 
 

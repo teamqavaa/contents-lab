@@ -1,25 +1,14 @@
 import Link from "next/link";
+import { UserPlus } from "lucide-react";
 
 export default function SignUpButton() {
   return (
-    <a
-      href="/api/auth/login?mode=login"
-      className="group flex items-center gap-3 bg-blue-400 text-white pl-5 pr-1 py-1 rounded-full font-bold text-xs tracking-wider transition-all hover:bg-neutral-800"
+    <Link
+      href="/api/auth/login?mode=register"
+      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-700 hover:text-black hover:bg-gray-100 rounded-full transition-colors"
     >
-      <span>SIGN UP</span>
-      <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full text-black transition-transform group-hover:translate-x-0.5">
-        <svg
-          className="w-4 h-4 stroke-current stroke-[2]"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
-          />
-        </svg>
-      </div>
-    </a>
+      <UserPlus className="w-4 h-4 text-gray-500" />
+      <span>Register</span>
+    </Link>
   );
 }

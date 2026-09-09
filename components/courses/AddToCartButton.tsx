@@ -2,84 +2,77 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { addToCartAction,  } from '@/actions/cart';
-import { Loader2, ArrowRight, X, LogIn } from 'lucide-react';
+import { Loader2, ArrowRight, PlayCircle, X, LogIn } from 'lucide-react';
+import { addToCartAction, getCoursePurchaseStatus } from '@/actions/cart';
 
 interface AddToCartButtonProps {
   courseId: string;
+  courseSlug: string;
   initialInCart?: boolean;
+  initialIsEnrolled?: boolean;
+  currentModuleSlug?: string;
 }
 
 const SSO_LOGIN_URL = '/api/auth/login?mode=login';
 
-function getCookie(name: string): string | undefined {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop()?.split(';').shift();
-}
-
-export default function AddToCartButton({ courseId, initialInCart = false }: AddToCartButtonProps) {
+export default function AddToCartButton({
+  courseId,
+  courseSlug,
+  initialInCart = false,
+  initialIsEnrolled = false,
+  currentModuleSlug
+}: AddToCartButtonProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(initialInCart);
+  const [isEnrolled, setIsEnrolled] = useState(initialIsEnrolled);
+  const [fetchedSlug, setFetchedSlug] = useState<string | null>(null);
+
+  const [isMounted, setIsMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(!initialInCart && !initialIsEnrolled);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
+    setIsMounted(true);
 
-    const checkCartStatus = async () => {
-      try {
-        const token = getCookie('access_token');
-        if (!token) return;
+    if (initialIsEnrolled || initialInCart) {
+      setIsLoading(false);
+      return;
+    }
 
-        const cartData = await getCartAction(token);
-
-        if (!isMounted) return;
-
-        if (cartData) {
-          const itemsList = Array.isArray(cartData)
-            ? cartData
-            : cartData.items || cartData.courses || cartData.data || [];
-
-          const itemExists = itemsList.some((item: any) => {
-            const idToCheck = item.course?.id || item.courseId || item.id || item.course_id;
-            return String(idToCheck) === String(courseId);
-          });
-
-          if (itemExists) {
-            setIsAdded(true);
+    getCoursePurchaseStatus(courseId)
+      .then((status) => {
+        if (status) {
+          setIsEnrolled(status.isEnrolled);
+          setIsAdded(status.isAdded);
+          if (status.courseSlug) {
+            setFetchedSlug(status.courseSlug);
           }
         }
-      } catch (err) {
-        console.error('Error checking cart status:', err);
-      }
-    };
-
-    checkCartStatus();
-
-    const handleCartUpdate = () => {
-      checkCartStatus();
-    };
-
-    window.addEventListener('cartUpdate', handleCartUpdate);
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener('cartUpdate', handleCartUpdate);
-    };
-  }, [courseId]);
+      })
+      .catch((err) => {
+        console.error('Error fetching course purchase status:', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [courseId, initialInCart, initialIsEnrolled]);
 
   const handleAddToCart = async () => {
     try {
       setIsAdding(true);
-      const token = getCookie('access_token');
+      const result = await addToCartAction(courseId);
 
-      const result = await addToCartAction(courseId, token);
+      const errorMessage = typeof result.error === 'string' ? result.error.toLowerCase() : '';
+      const isAlreadyEnrolled = errorMessage.includes('déjà inscrit') || errorMessage.includes('already enrolled');
+      const isAlreadyInCart = errorMessage.includes('déjà dans votre panier') || errorMessage.includes('already in your cart');
 
-      if (result.success || (result.error && typeof result.error === 'string' && (result.error.includes('déjà dans votre panier') || result.error.includes('already in your cart')))) {
+      if (result.success || isAlreadyInCart) {
         setIsAdded(true);
         window.dispatchEvent(new Event('cartUpdate'));
+      } else if (isAlreadyEnrolled) {
+        setIsEnrolled(true);
       } else {
-        if (result.error && typeof result.error === 'string' && (result.error.includes('Access token manquant') || result.error.includes('Missing access token'))) {
+        if (errorMessage.includes('access token manquant') || errorMessage.includes('missing access token')) {
           setShowAuthModal(true);
         } else {
           console.error('Failed to add to cart:', result.error);
@@ -92,9 +85,30 @@ export default function AddToCartButton({ courseId, initialInCart = false }: Add
     }
   };
 
+  const safeSlug = courseSlug || fetchedSlug || 'unknown-course';
+  const basePath = `/course/${safeSlug}/learn`;
+  const courseLearnLink = currentModuleSlug ? `${basePath}#${currentModuleSlug}` : basePath;
+
+  if (!isMounted || isLoading) {
+    return (
+      <div className="px-4 py-2 bg-neutral-100 text-neutral-400 text-xs font-bold rounded-lg flex items-center gap-1.5 animate-pulse">
+        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        <span>Loading...</span>
+      </div>
+    );
+  }
+
   return (
     <>
-      {isAdded ? (
+      {isEnrolled ? (
+        <Link
+          href={courseLearnLink}
+          className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-2xs"
+        >
+          <span>View Course</span>
+          <PlayCircle className="w-3.5 h-3.5" />
+        </Link>
+      ) : isAdded ? (
         <Link
           href="/carts"
           className="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-1.5 shadow-2xs"
@@ -123,7 +137,6 @@ export default function AddToCartButton({ courseId, initialInCart = false }: Add
       {showAuthModal && (
         <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 animate-fadeIn">
           <div className="bg-white rounded-3xl shadow-xl border border-neutral-100 max-w-sm w-full p-6 flex flex-col gap-4 relative">
-
             <button
               type="button"
               onClick={() => setShowAuthModal(false)}
@@ -152,16 +165,8 @@ export default function AddToCartButton({ courseId, initialInCart = false }: Add
               >
                 <span>SIGN IN</span>
                 <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full text-black transition-transform group-hover:translate-x-0.5">
-                  <svg
-                    className="w-4 h-4 stroke-current stroke-[2]"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
-                    />
+                  <svg className="w-4 h-4 stroke-current stroke-[2]" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
                   </svg>
                 </div>
               </a>
@@ -174,7 +179,6 @@ export default function AddToCartButton({ courseId, initialInCart = false }: Add
                 Cancel
               </button>
             </div>
-
           </div>
         </div>
       )}

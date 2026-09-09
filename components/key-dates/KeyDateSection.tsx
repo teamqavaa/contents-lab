@@ -12,19 +12,19 @@ const keyDatesData: DateItem[] = [
     id: '1',
     iconType: 'calendar',
     label: 'Start Date',
-    value: '12 October 2026',
+    value: '10 October 2026',
   },
   {
     id: '2',
     iconType: 'clock',
     label: 'Duration',
-    value: '8 Weeks · Part-time',
+    value: 'All day · Long',
   },
   {
     id: '3',
     iconType: 'graduation',
     label: 'Defense & Graduation',
-    value: '6 December 2026',
+    value: '10 October 2026',
   },
 ];
 
@@ -36,7 +36,7 @@ export default function KeyDatesSection() {
         {/* En-tête de la section */}
         <div className="flex flex-col gap-2">
           <span className="text-xs md:text-sm font-semibold tracking-widest text-neutral-500 uppercase">
-            MARK YOUR CALENDAR
+            IGNITE YOUR FUTURE
           </span>
           <h2 className="text-4xl md:text-5xl lg:text-3xl font-extrabold text-neutral-900 tracking-tight">
             Key dates

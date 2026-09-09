@@ -1,4 +1,5 @@
 // components/header/NavLinks.tsx
+import SearchTrigger from '@/components/search/SearchTrigger';
 import Link from 'next/link';
 
 interface NavItem {
@@ -9,12 +10,12 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Browse Courses', href: '/courses' },
   { label: 'Explore Careers', href: '/careers' },
-  { label: 'LOG IN', href: '/login' },
 ];
 
 export default function NavLinks() {
   return (
-    <nav className="hidden md:flex items-center gap-6 lg:gap-8">
+   <div className="flex items-center gap-6 lg:gap-8">
+     <nav className="hidden md:flex items-center gap-6 lg:gap-8">
       {navItems.map((item) => (
         <Link
           key={item.label}
@@ -25,5 +26,7 @@ export default function NavLinks() {
         </Link>
       ))}
     </nav>
+    <SearchTrigger />
+   </div>
   );
 }

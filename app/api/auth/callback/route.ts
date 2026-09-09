@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "authorization_code",
-        client_id: process.env.SSO_CLIENT_ID || "UCUWyF4S2sglNWTbrz2Qu07DrEnE1lDZpDPuucPy",
+        client_id: process.env.SSO_CLIENT_ID || "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX",
         code: code,
         redirect_uri: "http://localhost:3001/api/auth/callback",
         code_verifier: codeVerifier,

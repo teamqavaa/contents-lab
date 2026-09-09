@@ -34,7 +34,7 @@ export async function GET(request: Request) {
 
   // 3. Configuration des URLs
   const SSO_BASE_URL = process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3000";
-  const CLIENT_ID = process.env.SSO_CLIENT_ID || "UCUWyF4S2sglNWTbrz2Qu07DrEnE1lDZpDPuucPy";
+  const CLIENT_ID = process.env.SSO_CLIENT_ID || "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX";
   const REDIRECT_URI = "http://localhost:3001/api/auth/callback";
 
   // 🚨 CORRECTION : On pointe TOUJOURS sur la racine "/" car c'est la seule route publique dans proxy.ts

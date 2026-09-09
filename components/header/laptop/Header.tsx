@@ -5,9 +5,8 @@ import { useEffect, useState } from "react";
 import SearchTrigger from "@/components/search/SearchTrigger";
 import Logo from "./Logo";
 import NavLinks from "./NavLinks";
-import SignUpButton from "./SignUpButton";
 import UserMenu from "./UserMenu";
-
+import SignInButton from "./SignInButton";
 export default function Header() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -48,11 +47,10 @@ export default function Header() {
         <div className="flex items-center justify-between bg-white border border-gray-300 shadow-lg shadow-gray-200/50 rounded-full p-1.5 pl-2">
           <Logo />
           <NavLinks />
-          <SearchTrigger />
 
           <div className="flex items-center gap-2">
             {!isLoading && (
-              isAuthenticated ? <UserMenu /> : <SignUpButton />
+              isAuthenticated ? <UserMenu /> : <SignInButton />
             )}
           </div>
         </div>
