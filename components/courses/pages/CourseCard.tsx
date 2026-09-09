@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import AddToCartButton from '../AddToCartButton';
 
 export interface CourseItem {
   id: string;
@@ -87,41 +88,47 @@ export default function CourseCard({ course, onToggleFavorite }: CourseCardProps
         </div>
       </div>
 
-      <div className="p-5 pt-0 flex items-center justify-between border-t border-neutral-100 mt-2">
-        <div className="flex items-center gap-3 text-xs font-medium text-neutral-500 pt-3">
-          <div className="flex items-center gap-1.5 font-semibold text-neutral-900">
-            <svg className="w-3.5 h-3.5 stroke-neutral-500 stroke-[1.8]" fill="none" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.659A2.25 2.25 0 009.568 3z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
-            </svg>
-            <span>
-              {course.price === 0 ? (
-                <span className="text-emerald-600 font-bold">Free</span>
-              ) : (
-                `$${course.price}`
-              )}
-            </span>
-            {course.originalPrice && course.originalPrice > course.price && (
-              <span className="text-neutral-400 line-through text-[11px] font-normal">
-                ${course.originalPrice}
+      <div className="p-5 pt-0 border-t border-neutral-100 mt-2">
+        <div className="flex items-center justify-between pt-3">
+          <div className="flex items-center gap-3 text-xs font-medium text-neutral-500">
+            <div className="flex items-center gap-1.5 font-semibold text-neutral-900">
+              <svg className="w-3.5 h-3.5 stroke-neutral-500 stroke-[1.8]" fill="none" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.659A2.25 2.25 0 009.568 3z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+              </svg>
+              <span>
+                {course.price === 0 ? (
+                  <span className="text-emerald-600 font-bold">Free</span>
+                ) : (
+                  `$${course.price}`
+                )}
               </span>
-            )}
+              {course.originalPrice && course.originalPrice > course.price && (
+                <span className="text-neutral-400 line-through text-[11px] font-normal">
+                  ${course.originalPrice}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1">
+              <svg className="w-3.5 h-3.5 stroke-current stroke-[1.8]" fill="none" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a.5.5 0 00.71 0L21.75 8" />
+              </svg>
+              <span>{course.difficulty}</span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-1">
-            <svg className="w-3.5 h-3.5 stroke-current stroke-[1.8]" fill="none" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18L9 11.25l4.306 4.307a.5.5 0 00.71 0L21.75 8" />
-            </svg>
-            <span>{course.difficulty}</span>
-          </div>
+          <AddToCartButton courseId={course.id} />
         </div>
 
-        <Link
-          href={coursePath}
-          className="mt-3 px-3.5 py-1.5 border border-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg hover:bg-neutral-50 transition-colors"
-        >
-          Details
-        </Link>
+        <div className="mt-3 flex justify-end">
+          <Link
+            href={coursePath}
+            className="px-3.5 py-1.5 border border-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg hover:bg-neutral-50 transition-colors"
+          >
+            Details
+          </Link>
+        </div>
       </div>
 
     </div>
