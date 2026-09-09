@@ -24,7 +24,7 @@ const navItems = [
   { href: "/admin/skills", label: "Skills", icon: Grid3x3 },
   { href: "/admin/courses", label: "Courses", icon: Book },
   { href: "/admin/instructors", label: "Instructors", icon: User },
-  { href: "/admin/learning-paths", label: "Learning Paths", icon: BarChart3 },
+  { href: "/admin/learning-paths", label: "Career Paths", icon: BarChart3 },
   { href: "/admin/categories", label: "Categories", icon: Grid3x3 },
   { href: "/admin/quizzes", label: "Quizzes", icon: ClipboardCheck },
 ];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 
 import { DataTable, type DataColumn } from "@/components/admin/DataTable";
@@ -10,10 +10,23 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   createLearningPathAction,
+  createPathOutcomeAction,
+  createPathPrerequisiteAction,
   deleteLearningPathAction,
+  deletePathOutcomeAction,
+  deletePathPrerequisiteAction,
+  listPathOutcomesAction,
+  listPathPrerequisitesAction,
   updateLearningPathAction,
+  updatePathOutcomeAction,
+  updatePathPrerequisiteAction,
 } from "@/lib/admin-actions";
-import type { Course, LearningPath } from "@/lib/api/courses-api";
+import type {
+  Course,
+  LearningPath,
+  LearningPathOutcome,
+  LearningPathPrerequisite,
+} from "@/lib/api/courses-api";
 
 const inputClass =
   "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
@@ -109,6 +122,63 @@ function CoursePicker({
     </div>
   );
 }
+
+// Dynamic list of text bullets (outcomes or prerequisites) with add/remove.
+function BulletList({
+  label,
+  items,
+  onChange,
+}: {
+  label: string;
+  items: { id?: number; order: number; content: string }[];
+  onChange: (items: { id?: number; order: number; content: string }[]) => void;
+}) {
+  function updateContent(index: number, content: string) {
+    const next = items.map((item, i) => (i === index ? { ...item, content } : item));
+    onChange(next);
+  }
+
+  function addItem() {
+    onChange([...items, { order: items.length + 1, content: "" }]);
+  }
+
+  function removeItem(index: number) {
+    const next = items.filter((_, i) => i !== index).map((item, i) => ({ ...item, order: i + 1 }));
+    onChange(next);
+  }
+
+  return (
+    <div className="space-y-1">
+      <label className="text-xs font-medium text-foreground">{label}</label>
+      {items.length === 0 && (
+        <p className="text-xs text-muted-foreground">No items yet.</p>
+      )}
+      {items.map((item, i) => (
+        <div key={item.id ?? `new-${i}`} className="flex gap-1">
+          <input
+            value={item.content}
+            onChange={(e) => updateContent(i, e.target.value)}
+            placeholder={`${label} ${i + 1}`}
+            className={inputClass}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 flex-shrink-0 px-0"
+            onClick={() => removeItem(i)}
+          >
+            <Trash2 size={14} />
+          </Button>
+        </div>
+      ))}
+      <Button type="button" variant="outline" size="sm" onClick={addItem}>
+        <Plus size={13} /> Add
+      </Button>
+    </div>
+  );
+}
+
 function LearningPathForm({ courses }: { courses: Course[] }) {
   return (
     <form
@@ -195,7 +265,7 @@ function LearningPathForm({ courses }: { courses: Course[] }) {
   );
 }
 
-// Edit panel: base fields plus a live course picker saved to the path.
+// Edit panel: base fields, course picker, outcomes, prerequisites.
 function LearningPathEditPanel({
   path,
   courses,
@@ -215,10 +285,32 @@ function LearningPathEditPanel({
     is_active: path.is_active,
   });
   const [selectedCourses, setSelectedCourses] = useState<string[]>(path.courses);
+  const [outcomes, setOutcomes] = useState<{ id?: number; order: number; content: string }[]>([]);
+  const [prerequisites, setPrerequisites] = useState<{ id?: number; order: number; content: string }[]>([]);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Load existing outcomes and prerequisites on mount.
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      const [outRes, preRes] = await Promise.all([
+        listPathOutcomesAction(path.id),
+        listPathPrerequisitesAction(path.id),
+      ]);
+      if (cancelled) return;
+      setOutcomes((outRes.data ?? []).map((o) => ({ id: o.id, order: o.order, content: o.content })));
+      setPrerequisites((preRes.data ?? []).map((p) => ({ id: p.id, order: p.order, content: p.content })));
+      setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [path.id]);
 
   async function save() {
     setSaving(true);
+
+    // 1. Update path fields.
     await updateLearningPathAction(path.id, {
       title: fields.title,
       description: fields.description || null,
@@ -231,6 +323,50 @@ function LearningPathEditPanel({
       is_active: fields.is_active,
       courses: selectedCourses,
     });
+
+    // 2. Reconcile outcomes: create new, update existing, delete removed.
+    const existingOutcomes = outcomes.filter((o) => o.id != null);
+    const newOutcomes = outcomes.filter((o) => o.id == null);
+
+    // Delete outcomes that were removed.
+    const currentOutcomeIds = new Set(outcomes.filter((o) => o.id != null).map((o) => o.id));
+    const originalOutcomes = await listPathOutcomesAction(path.id);
+    for (const orig of originalOutcomes.data ?? []) {
+      if (!currentOutcomeIds.has(orig.id)) {
+        await deletePathOutcomeAction(path.id, orig.id);
+      }
+    }
+
+    // Update existing outcomes.
+    for (const o of existingOutcomes) {
+      await updatePathOutcomeAction(path.id, o.id!, { order: o.order, content: o.content });
+    }
+
+    // Create new outcomes.
+    for (const o of newOutcomes) {
+      await createPathOutcomeAction(path.id, { order: o.order, content: o.content });
+    }
+
+    // 3. Reconcile prerequisites: same pattern.
+    const existingPres = prerequisites.filter((p) => p.id != null);
+    const newPres = prerequisites.filter((p) => p.id == null);
+
+    const currentPreIds = new Set(prerequisites.filter((p) => p.id != null).map((p) => p.id));
+    const originalPres = await listPathPrerequisitesAction(path.id);
+    for (const orig of originalPres.data ?? []) {
+      if (!currentPreIds.has(orig.id)) {
+        await deletePathPrerequisiteAction(path.id, orig.id);
+      }
+    }
+
+    for (const p of existingPres) {
+      await updatePathPrerequisiteAction(path.id, p.id!, { order: p.order, content: p.content });
+    }
+
+    for (const p of newPres) {
+      await createPathPrerequisiteAction(path.id, { order: p.order, content: p.content });
+    }
+
     setSaving(false);
     location.reload();
   }
@@ -239,7 +375,7 @@ function LearningPathEditPanel({
     <div className="mb-6 space-y-4 rounded-xl border border-border bg-white p-4">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">Edit path — {path.title}</p>
-        <Button type="button" size="sm" onClick={save} disabled={saving}>
+        <Button type="button" size="sm" onClick={save} disabled={saving || loading}>
           {saving ? "Saving…" : "Save path"}
         </Button>
       </div>
@@ -314,10 +450,22 @@ function LearningPathEditPanel({
           <label className="text-xs font-medium text-foreground">Courses</label>
           <CoursePicker courses={courses} selected={selectedCourses} onChange={setSelectedCourses} />
         </div>
+        <div className="space-y-1 sm:col-span-2">
+          {loading ? (
+            <p className="text-xs text-muted-foreground">Loading bullets…</p>
+          ) : (
+            <>
+              <BulletList label="What you'll learn" items={outcomes} onChange={setOutcomes} />
+              <div className="mt-3" />
+              <BulletList label="Prerequisites" items={prerequisites} onChange={setPrerequisites} />
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+
 export function LearningPathsManager({
   paths,
   courses,

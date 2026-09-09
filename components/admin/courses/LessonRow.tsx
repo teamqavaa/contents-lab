@@ -4,17 +4,21 @@ import { useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  createDjangoLabActivityAction,
   createDjangoVideoAction,
+  deleteDjangoLabActivityAction,
   deleteDjangoLessonAction,
   deleteDjangoVideoAction,
   updateDjangoLessonAction,
   updateDjangoVideoAction,
 } from "@/lib/admin-actions";
 import type {
+  DjangoLabActivity,
   DjangoLesson,
   DjangoLessonType,
   DjangoVideo,
 } from "@/lib/api/courses-api";
+import type { Lab } from "@/lib/api/lab-api";
 import {
   emptyVideoForm,
   VideoEditControls,
@@ -47,9 +51,11 @@ function videoToForm(v: DjangoVideo): VideoFormState {
 
 export function LessonRow({
   lesson,
+  drLabs,
   onRefresh,
 }: {
   lesson: DjangoLesson;
+  drLabs: Lab[];
   onRefresh: () => void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -63,12 +69,17 @@ export function LessonRow({
   const [busy, setBusy] = useState(false);
 
   const video = lesson.video ?? null;
+  const labActivities = lesson.lab_activities ?? [];
 
   // Video state
   const [editingVideo, setEditingVideo] = useState(false);
   const [videoForm, setVideoForm] = useState<VideoFormState>(
     video ? videoToForm(video) : emptyVideoForm
   );
+
+  // Lab activity state
+  const [editingLabs, setEditingLabs] = useState(false);
+  const [labForm, setLabForm] = useState({ lab_id: "", title: "" });
 
   async function saveLesson() {
     setBusy(true);
@@ -119,6 +130,30 @@ export function LessonRow({
   async function deleteVideo() {
     setBusy(true);
     await deleteDjangoVideoAction(video!.id);
+    setBusy(false);
+    onRefresh();
+  }
+
+  async function addLabActivity() {
+    if (!labForm.lab_id.trim()) return;
+    setBusy(true);
+    const nextOrder = labActivities.length + 1;
+    const res = await createDjangoLabActivityAction({
+      lesson: lesson.id,
+      lab_id: labForm.lab_id.trim(),
+      title: labForm.title.trim() || undefined,
+      order: nextOrder,
+    });
+    setBusy(false);
+    if (res.ok) {
+      setLabForm({ lab_id: "", title: "" });
+      onRefresh();
+    }
+  }
+
+  async function deleteLabActivity(id: string) {
+    setBusy(true);
+    await deleteDjangoLabActivityAction(id);
     setBusy(false);
     onRefresh();
   }
@@ -201,6 +236,11 @@ export function LessonRow({
             </span>
             {lesson.is_preview && (
               <span className="ml-1 text-xs text-primary">preview</span>
+            )}
+            {labActivities.length > 0 && (
+              <Badge variant="default" className="ml-2">
+                {labActivities.length} lab{labActivities.length !== 1 ? "s" : ""}
+              </Badge>
             )}
           </div>
         )}
@@ -289,6 +329,102 @@ export function LessonRow({
             </Button>
           </div>
         ))}
+
+      {/* Lab Activities section — always shown (not editing) */}
+      {!editing && (
+        <div className="mt-2 border-t border-border pt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Lab Activities
+            </span>
+            {!editingLabs && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setEditingLabs(true)}
+              >
+                <Plus size={12} />
+              </Button>
+            )}
+          </div>
+
+          {labActivities.length > 0 && (
+            <ul className="mt-1 space-y-1">
+              {labActivities.map((la: DjangoLabActivity) => (
+                <li
+                  key={la.id}
+                  className="flex items-center justify-between rounded bg-muted/50 px-2 py-1 text-xs"
+                >
+                  <span className="truncate">
+                    <span className="text-muted-foreground">{la.order}.</span>{" "}
+                    {la.title || la.lab_id.slice(0, 8)}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-5 w-5 p-0"
+                    disabled={busy}
+                    onClick={() => {
+                      if (confirm("Remove this lab activity?")) deleteLabActivity(la.id);
+                    }}
+                  >
+                    <Trash2 size={11} />
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {editingLabs && (
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <select
+                value={labForm.lab_id}
+                onChange={(e) => {
+                  const selectedId = e.target.value;
+                  const lab = drLabs.find((l) => l.id === selectedId);
+                  setLabForm((f) => ({
+                    ...f,
+                    lab_id: selectedId,
+                    title: lab?.title ?? f.title,
+                  }));
+                }}
+                className={inputClass + " flex-1 min-w-[200px]"}
+              >
+                <option value="">Select a lab…</option>
+                {drLabs.map((lab) => (
+                  <option key={lab.id} value={lab.id}>
+                    {lab.title} ({lab.language}, {lab.difficulty})
+                  </option>
+                ))}
+              </select>
+              <input
+                value={labForm.title}
+                onChange={(e) => setLabForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="Title override (optional)"
+                className={inputClass + " flex-1 min-w-[160px]"}
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy || !labForm.lab_id.trim()}
+                onClick={addLabActivity}
+              >
+                Add
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setEditingLabs(false);
+                  setLabForm({ lab_id: "", title: "" });
+                }}
+              >
+                Done
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </li>
   );
 }

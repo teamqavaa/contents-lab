@@ -44,11 +44,11 @@ function columns(skillsById: Map<string, Skill>): DataColumn<Lab>[] {
       render: (l) => <Badge variant="outline">{l.difficulty}</Badge>,
     },
     {
-      key: "skill",
-      header: "Skill",
+      key: "skills",
+      header: "Skills",
       render: (l) => (
         <span className="text-muted-foreground">
-          {(l.skill && skillsById.get(l.skill)?.title) || "—"}
+          {l.skill_slugs.length > 0 ? l.skill_slugs.join(", ") : "—"}
         </span>
       ),
     },
@@ -66,6 +66,41 @@ function columns(skillsById: Map<string, Skill>): DataColumn<Lab>[] {
       ),
     },
   ];
+}
+
+// Multi-select skill picker using checkboxes.
+function SkillPicker({
+  skills,
+  selected,
+  onChange,
+}: {
+  skills: Skill[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  function toggle(id: string) {
+    onChange(
+      selected.includes(id) ? selected.filter((x) => x !== id) : [...selected, id]
+    );
+  }
+
+  return (
+    <div className="max-h-32 space-y-1 overflow-y-auto rounded-md border border-input p-2">
+      {skills.length === 0 && (
+        <p className="text-xs text-muted-foreground">No skills available.</p>
+      )}
+      {skills.map((skill) => (
+        <label key={skill.id} className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={selected.includes(skill.id)}
+            onChange={() => toggle(skill.id)}
+          />
+          <span className="text-foreground">{skill.title}</span>
+        </label>
+      ))}
+    </div>
+  );
 }
 
 function LabForm({ skills }: { skills: Skill[] }) {
@@ -105,20 +140,24 @@ function LabForm({ skills }: { skills: Skill[] }) {
             <option value="published">Published</option>
           </select>
         </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-foreground">Skill</label>
-          <select name="skill" defaultValue="" className={inputClass}>
-            <option value="">Uncategorized</option>
-            {skills.map((skill) => (
-              <option key={skill.id} value={skill.id}>
-                {skill.title}
-              </option>
-            ))}
-          </select>
-        </div>
         <div className="space-y-1 sm:col-span-2">
           <label className="text-xs font-medium text-foreground">Description</label>
           <input name="description" placeholder="Short description" className={inputClass} />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <label className="text-xs font-medium text-foreground">Skills</label>
+          <div className="max-h-32 space-y-1 overflow-y-auto rounded-md border border-input p-2">
+            {skills.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No skills available.</p>
+            ) : (
+              skills.map((skill) => (
+                <label key={skill.id} className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" name="skills" value={skill.id} />
+                  <span className="text-foreground">{skill.title}</span>
+                </label>
+              ))
+            )}
+          </div>
         </div>
         <div className="space-y-1 sm:col-span-2">
           <label className="text-xs font-medium text-foreground">Starter code</label>
@@ -136,8 +175,8 @@ function LabForm({ skills }: { skills: Skill[] }) {
     </form>
   );
 }
-// Per-lab step editor mirroring Django's LabObjectiveInline. A nested form
-// creates an objective; each row can expand into a full edit form.
+
+// Per-lab step editor mirroring Django's LabObjectiveInline.
 function ObjectivePanel({ lab }: { lab: Lab }) {
   const rows = [...lab.objectives].sort((a, b) => a.order - b.order);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -252,6 +291,7 @@ function ObjectiveAddForm({ labId, nextOrder }: { labId: string; nextOrder: numb
     </form>
   );
 }
+
 // Edit panel for an existing lab: editable base fields plus the step editor.
 function LabEditPanel({ lab, skills }: { lab: Lab; skills: Skill[] }) {
   const [fields, setFields] = useState({
@@ -260,9 +300,9 @@ function LabEditPanel({ lab, skills }: { lab: Lab; skills: Skill[] }) {
     language: lab.language,
     status: lab.status,
     difficulty: lab.difficulty,
-    skill: lab.skill ?? "",
     starter_code: lab.starter_code ?? "",
   });
+  const [selectedSkills, setSelectedSkills] = useState<string[]>(lab.skills);
   const [saving, setSaving] = useState(false);
 
   function save() {
@@ -274,8 +314,10 @@ function LabEditPanel({ lab, skills }: { lab: Lab; skills: Skill[] }) {
     form.set("language", fields.language);
     form.set("status", fields.status);
     form.set("difficulty", fields.difficulty);
-    form.set("skill", fields.skill);
     form.set("starter_code", fields.starter_code);
+    for (const skillId of selectedSkills) {
+      form.append("skills", skillId);
+    }
     updateLabAction(form).then(() => {
       setSaving(false);
       location.reload();
@@ -294,21 +336,6 @@ function LabEditPanel({ lab, skills }: { lab: Lab; skills: Skill[] }) {
         <div className="space-y-1">
           <label className="text-xs font-medium text-foreground">Title</label>
           <input value={fields.title} onChange={(e) => setFields({ ...fields, title: e.target.value })} className={inputClass} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-foreground">Skill</label>
-          <select
-            value={fields.skill}
-            onChange={(e) => setFields({ ...fields, skill: e.target.value })}
-            className={inputClass}
-          >
-            <option value="">Uncategorized</option>
-            {skills.map((skill) => (
-              <option key={skill.id} value={skill.id}>
-                {skill.title}
-              </option>
-            ))}
-          </select>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-medium text-foreground">Language</label>
@@ -340,6 +367,10 @@ function LabEditPanel({ lab, skills }: { lab: Lab; skills: Skill[] }) {
         <div className="space-y-1 sm:col-span-2">
           <label className="text-xs font-medium text-foreground">Description</label>
           <input value={fields.description} onChange={(e) => setFields({ ...fields, description: e.target.value })} className={inputClass} />
+        </div>
+        <div className="space-y-1 sm:col-span-2">
+          <label className="text-xs font-medium text-foreground">Skills</label>
+          <SkillPicker skills={skills} selected={selectedSkills} onChange={setSelectedSkills} />
         </div>
         <div className="space-y-1 sm:col-span-2">
           <label className="text-xs font-medium text-foreground">Starter code</label>

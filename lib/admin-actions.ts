@@ -12,6 +12,7 @@ import {
   djangoCoursesApi,
   djangoCoursesSlugApi,
   djangoHighlightsApi,
+  djangoLabActivitiesApi,
   djangoLearningPointsApi,
   djangoLessonsApi,
   djangoModulesApi,
@@ -24,7 +25,7 @@ import {
   questionsApi,
   quizzesApi,
 } from "@/lib/api/courses-api";
-import type { LearningPath, Quiz } from "@/lib/api/courses-api";
+import type { LearningPath, LearningPathOutcome, LearningPathPrerequisite, Quiz } from "@/lib/api/courses-api";
 
 import {
   apiBulkUsers,
@@ -40,7 +41,7 @@ import {
   apiUpdateSkill,
   apiUpdateUser,
 } from "@/lib/api/lab-api";
-import type { AdminUserCreateInput } from "@/lib/api/lab-api";
+import type { AdminUserCreateInput, Lab, SkillOutcome, SkillPrerequisite } from "@/lib/api/lab-api";
 
 type ActionResult = { ok: boolean; error?: string };
 
@@ -147,6 +148,9 @@ export async function createSkillAction(
     icon: String(formData.get("icon") ?? ""),
     order: Number(formData.get("order") ?? 0),
     is_active: formData.get("is_active") === "1",
+    duration_weeks: Number(formData.get("duration_weeks") ?? 0),
+    pace: String(formData.get("pace") ?? "self-paced"),
+    includes_certificate: formData.get("includes_certificate") === "1",
   });
   if (result.ok) revalidatePath("/admin/skills");
   return { ok: result.ok, error: result.error ?? undefined };
@@ -161,6 +165,9 @@ export async function updateSkillAction(
     icon?: string;
     order?: number;
     is_active?: boolean;
+    duration_weeks?: number;
+    pace?: string;
+    includes_certificate?: boolean;
   }
 ): Promise<ActionResult> {
   const token = await getAdminToken();
@@ -176,18 +183,91 @@ export async function deleteSkillAction(id: string): Promise<ActionResult> {
   return { ok: result.ok, error: result.error ?? undefined };
 }
 
+// ---------------------------------------------------------------------------
+// Skill Outcomes / Prerequisites
+// ---------------------------------------------------------------------------
+
+export async function createSkillOutcomeAction(
+  skillId: string,
+  payload: { order: number; content: string }
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { skillOutcomesApi } = await import("@/lib/api/lab-api");
+  const result = await skillOutcomesApi(skillId).create(token, payload);
+  if (result.ok) revalidatePath("/admin/skills");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function updateSkillOutcomeAction(
+  skillId: string,
+  id: number,
+  payload: { order?: number; content?: string }
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { skillOutcomesApi } = await import("@/lib/api/lab-api");
+  const result = await skillOutcomesApi(skillId).update(token, id, payload);
+  if (result.ok) revalidatePath("/admin/skills");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function deleteSkillOutcomeAction(
+  skillId: string,
+  id: number
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { skillOutcomesApi } = await import("@/lib/api/lab-api");
+  const result = await skillOutcomesApi(skillId).remove(token, id);
+  if (result.ok) revalidatePath("/admin/skills");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function createSkillPrerequisiteAction(
+  skillId: string,
+  payload: { order: number; content: string }
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { skillPrerequisitesApi } = await import("@/lib/api/lab-api");
+  const result = await skillPrerequisitesApi(skillId).create(token, payload);
+  if (result.ok) revalidatePath("/admin/skills");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function updateSkillPrerequisiteAction(
+  skillId: string,
+  id: number,
+  payload: { order?: number; content?: string }
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { skillPrerequisitesApi } = await import("@/lib/api/lab-api");
+  const result = await skillPrerequisitesApi(skillId).update(token, id, payload);
+  if (result.ok) revalidatePath("/admin/skills");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function deleteSkillPrerequisiteAction(
+  skillId: string,
+  id: number
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { skillPrerequisitesApi } = await import("@/lib/api/lab-api");
+  const result = await skillPrerequisitesApi(skillId).remove(token, id);
+  if (result.ok) revalidatePath("/admin/skills");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
 export async function createLabAction(
   _prev: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
   const token = await getAdminToken();
+  const skillsRaw = formData.getAll("skills").map(String).filter(Boolean);
   const result = await apiCreateLab(token, {
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? "") || null,
     language: String(formData.get("language") ?? "python"),
     status: String(formData.get("status") ?? "draft"),
     difficulty: String(formData.get("difficulty") ?? "guided"),
-    skill: (String(formData.get("skill") ?? "") || null) as string | null,
+    skills: skillsRaw,
     starter_code: String(formData.get("starter_code") ?? ""),
   });
   if (result.ok) revalidatePath("/admin/labs");
@@ -197,16 +277,27 @@ export async function createLabAction(
 export async function updateLabAction(formData: FormData): Promise<ActionResult> {
   const token = await getAdminToken();
   const id = String(formData.get("id") ?? "");
+  const skillsRaw = formData.getAll("skills").map(String).filter(Boolean);
   const result = await apiUpdateLab(token, id, {
     title: String(formData.get("title") ?? ""),
     description: String(formData.get("description") ?? "") || null,
     language: String(formData.get("language") ?? "python"),
     status: String(formData.get("status") ?? "draft"),
     difficulty: String(formData.get("difficulty") ?? "guided"),
-    skill: (String(formData.get("skill") ?? "") || null) as string | null,
+    skills: skillsRaw,
     starter_code: String(formData.get("starter_code") ?? ""),
   });
   if (result.ok) revalidatePath("/admin/labs");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function updateLabSkillsAction(
+  id: string,
+  skills: string[]
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const result = await apiUpdateLab(token, id, { skills });
+  if (result.ok) revalidatePath("/admin/skills");
   return { ok: result.ok, error: result.error ?? undefined };
 }
 
@@ -448,6 +539,123 @@ export async function deleteLearningPathAction(id: string): Promise<ActionResult
   const result = await learningPathsApi.remove(token, id);
   if (result.ok) revalidatePath("/admin/learning-paths");
   return { ok: result.ok, error: result.error ?? undefined };
+}
+
+// ---------------------------------------------------------------------------
+// Learning Path Outcomes / Prerequisites
+// ---------------------------------------------------------------------------
+
+export async function createPathOutcomeAction(
+  pathSlug: string,
+  payload: { order: number; content: string }
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { pathOutcomesApi } = await import("@/lib/api/courses-api");
+  const result = await pathOutcomesApi(pathSlug).create(token, payload);
+  if (result.ok) revalidatePath("/admin/learning-paths");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function updatePathOutcomeAction(
+  pathSlug: string,
+  id: number,
+  payload: { order?: number; content?: string }
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { pathOutcomesApi } = await import("@/lib/api/courses-api");
+  const result = await pathOutcomesApi(pathSlug).update(token, id, payload);
+  if (result.ok) revalidatePath("/admin/learning-paths");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function deletePathOutcomeAction(
+  pathSlug: string,
+  id: number
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { pathOutcomesApi } = await import("@/lib/api/courses-api");
+  const result = await pathOutcomesApi(pathSlug).remove(token, id);
+  if (result.ok) revalidatePath("/admin/learning-paths");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function createPathPrerequisiteAction(
+  pathSlug: string,
+  payload: { order: number; content: string }
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { pathPrerequisitesApi } = await import("@/lib/api/courses-api");
+  const result = await pathPrerequisitesApi(pathSlug).create(token, payload);
+  if (result.ok) revalidatePath("/admin/learning-paths");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function updatePathPrerequisiteAction(
+  pathSlug: string,
+  id: number,
+  payload: { order?: number; content?: string }
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { pathPrerequisitesApi } = await import("@/lib/api/courses-api");
+  const result = await pathPrerequisitesApi(pathSlug).update(token, id, payload);
+  if (result.ok) revalidatePath("/admin/learning-paths");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function deletePathPrerequisiteAction(
+  pathSlug: string,
+  id: number
+): Promise<ActionResult> {
+  const token = await getAdminToken();
+  const { pathPrerequisitesApi } = await import("@/lib/api/courses-api");
+  const result = await pathPrerequisitesApi(pathSlug).remove(token, id);
+  if (result.ok) revalidatePath("/admin/learning-paths");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+export async function listPathOutcomesAction(
+  pathSlug: string
+): Promise<{ ok: boolean; data?: LearningPathOutcome[]; error?: string }> {
+  const token = await getAdminToken();
+  const { pathOutcomesApi } = await import("@/lib/api/courses-api");
+  const result = await pathOutcomesApi(pathSlug).list(token);
+  return { ok: result.ok, data: result.data ?? undefined, error: result.error ?? undefined };
+}
+
+export async function listPathPrerequisitesAction(
+  pathSlug: string
+): Promise<{ ok: boolean; data?: LearningPathPrerequisite[]; error?: string }> {
+  const token = await getAdminToken();
+  const { pathPrerequisitesApi } = await import("@/lib/api/courses-api");
+  const result = await pathPrerequisitesApi(pathSlug).list(token);
+  return { ok: result.ok, data: result.data ?? undefined, error: result.error ?? undefined };
+}
+
+export async function listSkillOutcomesAction(
+  skillId: string
+): Promise<{ ok: boolean; data?: SkillOutcome[]; error?: string }> {
+  const token = await getAdminToken();
+  const { skillOutcomesApi } = await import("@/lib/api/lab-api");
+  const result = await skillOutcomesApi(skillId).list(token);
+  return { ok: result.ok, data: result.data ?? undefined, error: result.error ?? undefined };
+}
+
+export async function listSkillPrerequisitesAction(
+  skillId: string
+): Promise<{ ok: boolean; data?: SkillPrerequisite[]; error?: string }> {
+  const token = await getAdminToken();
+  const { skillPrerequisitesApi } = await import("@/lib/api/lab-api");
+  const result = await skillPrerequisitesApi(skillId).list(token);
+  return { ok: result.ok, data: result.data ?? undefined, error: result.error ?? undefined };
+}
+
+export async function listSkillLabsAction(
+  skillId: string
+): Promise<{ ok: boolean; data?: Lab[]; error?: string }> {
+  const token = await getAdminToken();
+  const { apiListLabs } = await import("@/lib/api/lab-api");
+  const result = await apiListLabs(token);
+  return { ok: result.ok, data: result.data ?? undefined, error: result.error ?? undefined };
 }
 
 export async function createQuizAction(
@@ -780,6 +988,56 @@ export async function updateDjangoVideoAction(
 export async function deleteDjangoVideoAction(id: string): Promise<DjangoActionResult> {
   const token = await getAdminToken();
   const result = await djangoVideosApi.remove(token, id);
+  if (result.ok) revalidatePath("/admin/courses");
+  return { ok: result.ok, error: result.error ?? undefined };
+}
+
+// --- Lab Activities ---
+
+export async function createDjangoLabActivityAction(input: {
+  lesson: string;
+  lab_id: string;
+  title?: string;
+  order: number;
+}): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoLabActivitiesApi.create(token, input);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    data: result.data,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function updateDjangoLabActivityAction(
+  id: string,
+  fields: Record<string, unknown>
+): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoLabActivitiesApi.update(token, id, fields);
+  if (result.ok) revalidatePath("/admin/courses");
+  const detail = result.detail as Record<string, string[]> | null;
+  return {
+    ok: result.ok,
+    error:
+      result.ok || !detail
+        ? (result.error ?? undefined)
+        : Object.entries(detail)
+            .map(([field, messages]) => `${field}: ${messages.join(" ")}`)
+            .join("; "),
+  };
+}
+
+export async function deleteDjangoLabActivityAction(id: string): Promise<DjangoActionResult> {
+  const token = await getAdminToken();
+  const result = await djangoLabActivitiesApi.remove(token, id);
   if (result.ok) revalidatePath("/admin/courses");
   return { ok: result.ok, error: result.error ?? undefined };
 }

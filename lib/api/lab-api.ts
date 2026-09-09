@@ -62,6 +62,22 @@ export type Skill = {
   icon: string;
   order: number;
   is_active: boolean;
+  duration_weeks: number;
+  pace: string;
+  includes_certificate: boolean;
+  lab_count: number;
+};
+
+export type SkillOutcome = {
+  id: number;
+  order: number;
+  content: string;
+};
+
+export type SkillPrerequisite = {
+  id: number;
+  order: number;
+  content: string;
 };
 
 export type Lab = {
@@ -71,8 +87,8 @@ export type Lab = {
   language: string;
   status: string;
   difficulty: string;
-  skill: string | null;
-  skill_slug: string;
+  skills: string[];
+  skill_slugs: string[];
   created_at: string;
   starter_code: string;
   objectives: LabObjective[];
@@ -205,6 +221,37 @@ export async function apiDeleteObjective(token: string, labId: string, objective
   return adminFetch<void>(token, `/api/admin/labs/${labId}/objectives/${objectiveId}/`, {
     method: "DELETE",
   }, LABS_API_URL);
+}
+
+// ---------------------------------------------------------------------------
+// Skill Outcomes / Prerequisites (nested CRUD)
+// ---------------------------------------------------------------------------
+
+function skillBulletsApi<T>(skillId: string, resource: "outcomes" | "prerequisites") {
+  const base = `/api/admin/skills/${skillId}/${resource}/`;
+  return {
+    list: (token: string) => adminFetch<T[]>(token, base, undefined, LABS_API_URL),
+    create: (token: string, payload: Partial<T>) =>
+      adminFetch<T>(token, base, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }, LABS_API_URL),
+    update: (token: string, id: number, payload: Partial<T>) =>
+      adminFetch<T>(token, `${base}${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }, LABS_API_URL),
+    remove: (token: string, id: number) =>
+      adminFetch<void>(token, `${base}${id}/`, { method: "DELETE" }, LABS_API_URL),
+  };
+}
+
+export function skillOutcomesApi(skillId: string) {
+  return skillBulletsApi<SkillOutcome>(skillId, "outcomes");
+}
+
+export function skillPrerequisitesApi(skillId: string) {
+  return skillBulletsApi<SkillPrerequisite>(skillId, "prerequisites");
 }
 
 export async function apiListUsers(token: string, role?: string) {

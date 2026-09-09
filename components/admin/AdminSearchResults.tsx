@@ -71,7 +71,7 @@ export function AdminSearchResults({
     }
 
     const labHits = labs.filter((l) =>
-      matchesQuery([l.title, l.description, l.language, l.skill_slug], query)
+      matchesQuery([l.title, l.description, l.language, ...l.skill_slugs], query)
     );
     if (labHits.length > 0) {
       out.push({

@@ -9,6 +9,7 @@ import {
   updateDjangoModuleAction,
 } from "@/lib/admin-actions";
 import type { DjangoLesson, DjangoLessonType, DjangoModule } from "@/lib/api/courses-api";
+import type { Lab } from "@/lib/api/lab-api";
 import { LessonRow } from "./LessonRow";
 
 const inputClass =
@@ -24,10 +25,12 @@ const LESSON_TYPES: { value: DjangoLessonType; label: string }[] = [
 export function ModuleCard({
   module,
   lessons,
+  drLabs,
   onRefresh,
 }: {
   module: DjangoModule;
   lessons: DjangoLesson[];
+  drLabs: Lab[];
   onRefresh: () => void;
 }) {
   const sortedLessons = [...lessons].sort((a, b) => a.order - b.order);
@@ -213,7 +216,7 @@ export function ModuleCard({
           )}
           <ul className="space-y-1.5">
             {sortedLessons.map((l) => (
-              <LessonRow key={l.id} lesson={l} onRefresh={onRefresh} />
+              <LessonRow key={l.id} lesson={l} drLabs={drLabs} onRefresh={onRefresh} />
             ))}
           </ul>
 

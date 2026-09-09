@@ -160,6 +160,46 @@ export type LearningPath = {
   courses: string[];
 };
 
+export type LearningPathOutcome = {
+  id: number;
+  order: number;
+  content: string;
+};
+
+export type LearningPathPrerequisite = {
+  id: number;
+  order: number;
+  content: string;
+};
+
+// CRUD helpers for nested outcome/prerequisite resources on a learning path.
+function pathBulletsApi<T>(pathSlug: string, resource: "outcomes" | "prerequisites") {
+  const base = `/api/learning-paths/${pathSlug}/${resource}/`;
+  return {
+    list: (token: string) => adminFetch<T[]>(token, base),
+    create: (token: string, payload: Partial<T>) =>
+      adminFetch<T>(token, base, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }),
+    update: (token: string, id: number, payload: Partial<T>) =>
+      adminFetch<T>(token, `${base}${id}/`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }),
+    remove: (token: string, id: number) =>
+      adminFetch<void>(token, `${base}${id}/`, { method: "DELETE" }),
+  };
+}
+
+export function pathOutcomesApi(pathSlug: string) {
+  return pathBulletsApi<LearningPathOutcome>(pathSlug, "outcomes");
+}
+
+export function pathPrerequisitesApi(pathSlug: string) {
+  return pathBulletsApi<LearningPathPrerequisite>(pathSlug, "prerequisites");
+}
+
 export type Quiz = {
   id: string;
   type_quiz: string | null;
@@ -384,6 +424,7 @@ export type DjangoLesson = {
   is_preview: boolean;
   is_published: boolean;
   video?: DjangoVideo | null;
+  lab_activities: DjangoLabActivity[];
   created_at: string;
   updated_at: string;
 };
@@ -479,6 +520,16 @@ export type DjangoResource = {
   updated_at: string;
 };
 
+export type DjangoLabActivity = {
+  id: string;
+  lesson: string;
+  lab_id: string;
+  title: string;
+  order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 // ---------------------------------------------------------------------------
 // Django-aligned CRUD helpers (use UUID string IDs, correct /api/ paths)
 // ---------------------------------------------------------------------------
@@ -522,6 +573,7 @@ export const djangoOutcomesApi = djangoCrud<DjangoCourseOutcome>("/api/course-ou
 export const djangoHighlightsApi = djangoCrud<DjangoCourseHighlight>("/api/course-highlights/");
 export const djangoLearningPointsApi = djangoCrud<DjangoCourseLearningPoint>("/api/course-learning-points/");
 export const djangoResourcesApi = djangoCrud<DjangoResource>("/api/resources/");
+export const djangoLabActivitiesApi = djangoCrud<DjangoLabActivity>("/api/lab-activities/");
 
 // Slug-based update/delete for courses (lookup_field = 'slug')
 export const djangoCoursesSlugApi = {

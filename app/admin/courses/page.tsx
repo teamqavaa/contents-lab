@@ -14,6 +14,8 @@ import {
   djangoTypeCoursesApi,
   djangoVideosApi,
 } from "@/lib/api/courses-api";
+import { apiListLabs } from "@/lib/api/lab-api";
+import type { Lab } from "@/lib/api/lab-api";
 
 export default async function CoursesPage() {
   await requireAdmin();
@@ -29,6 +31,7 @@ export default async function CoursesPage() {
     modulesRes,
     lessonsRes,
     videosRes,
+    drLabsRes,
   ] = await Promise.all([
     djangoCoursesApi.list(token),
     djangoTypeCoursesApi.list(token),
@@ -40,6 +43,7 @@ export default async function CoursesPage() {
     djangoModulesApi.list(token),
     djangoLessonsApi.list(token),
     djangoVideosApi.list(token),
+    apiListLabs(token).catch(() => ({ ok: false as const, data: null })),
   ]);
 
   return (
@@ -66,6 +70,7 @@ export default async function CoursesPage() {
         modules={modulesRes.data ?? []}
         lessons={lessonsRes.data ?? []}
         videos={videosRes.data ?? []}
+        drLabs={(drLabsRes.ok ? drLabsRes.data : null) ?? []}
       />
     </div>
   );

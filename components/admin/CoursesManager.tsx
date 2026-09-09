@@ -26,6 +26,7 @@ import type {
   DjangoTypeCourse,
   DjangoVideo,
 } from "@/lib/api/courses-api";
+import type { Lab } from "@/lib/api/lab-api";
 
 import { StepIndicator } from "./courses/StepIndicator";
 import { CourseTypeStep } from "./courses/CourseTypeStep";
@@ -109,20 +110,6 @@ const initialCourseInfo: CourseInfoValues = {
   promo_video_url: "",
 };
 
-type CourseEditFields = {
-  title: string;
-  subtitle: string;
-  description: string;
-  category: string;
-  language: string;
-  level: string;
-  status: string;
-  price: string;
-  discount_price: string;
-  thumbnail: string;
-  promo_video_url: string;
-};
-
 export function CoursesManager({
   courses,
   courseTypes,
@@ -134,6 +121,7 @@ export function CoursesManager({
   modules,
   lessons,
   videos,
+  drLabs,
 }: {
   courses: DjangoCourse[];
   courseTypes: DjangoTypeCourse[];
@@ -145,6 +133,7 @@ export function CoursesManager({
   modules: DjangoModule[];
   lessons: DjangoLesson[];
   videos: DjangoVideo[];
+  drLabs: Lab[];
 }) {
   const [step, setStep] = useState(0); // 0 = list, 1 = type, 2 = info, 3 = content
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -152,12 +141,6 @@ export function CoursesManager({
   const [createdCourse, setCreatedCourse] = useState<DjangoCourse | null>(null);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [editingCourse, setEditingCourse] = useState<DjangoCourse | null>(null);
-  const [editFields, setEditFields] = useState<CourseEditFields | null>(null);
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [editThumbMode, setEditThumbMode] = useState<"link" | "upload">("link");
-  const [editThumbFile, setEditThumbFile] = useState<File | null>(null);
-  const [editThumbPreview, setEditThumbPreview] = useState<string | null>(null);
 
   // Step 3 related data (kept locally so newly added items show immediately)
   const [related, setRelated] = useState<{
@@ -189,6 +172,28 @@ export function CoursesManager({
     setCreatedCourse(null);
     setCreateError(null);
     setStep(1);
+  }
+
+  /** Enter the wizard at step 2 (info) pre-populated with the existing course data. */
+  function openEditor(c: DjangoCourse) {
+    setCreatedCourse(c);
+    setCourseInfo({
+      title: c.title,
+      subtitle: c.subtitle ?? "",
+      description: c.description ?? "",
+      category: c.category,
+      language: c.language,
+      level: c.level,
+      status: c.status,
+      price: c.price,
+      discount_price: c.discount_price,
+      tags: c.tags ?? [],
+      thumbnail: c.thumbnail ?? "",
+      thumbnailFile: null,
+      promo_video_url: c.promo_video_url ?? "",
+    });
+    setCreateError(null);
+    setStep(2);
   }
 
   async function handleCreateCourse(values: CourseInfoValues) {
@@ -246,7 +251,6 @@ export function CoursesManager({
 
   function finishWizard() {
     setStep(0);
-    // Let the server component re-fetch by navigating.
     window.location.reload();
   }
 
@@ -255,52 +259,6 @@ export function CoursesManager({
     deleteDjangoCourseAction(c.slug).then(() => {
       window.location.reload();
     });
-  }
-
-  // ---- Editing panel (reuses Django Course fields) ----
-  function openEditor(c: DjangoCourse) {
-    setEditingCourse(c);
-    setEditFields({
-      title: c.title,
-      subtitle: c.subtitle ?? "",
-      description: c.description ?? "",
-      category: c.category,
-      language: c.language,
-      level: c.level,
-      status: c.status,
-      price: c.price,
-      discount_price: c.discount_price,
-      thumbnail: c.thumbnail ?? "",
-      promo_video_url: c.promo_video_url ?? "",
-    });
-    setEditThumbMode(c.thumbnail ? "link" : "upload");
-    setEditThumbFile(null);
-    setEditThumbPreview(null);
-  }
-
-  async function saveEdit() {
-    if (!editingCourse || !editFields) return;
-    setSavingEdit(true);
-    const fields: Record<string, unknown> = {
-      title: editFields.title ?? "",
-      subtitle: editFields.subtitle ?? "",
-      description: editFields.description ?? "",
-      category: editFields.category ?? "",
-      language: editFields.language ?? "english",
-      level: editFields.level ?? "all",
-      status: editFields.status ?? "draft",
-      price: editFields.price ?? "0",
-      discount_price: editFields.discount_price ?? "0",
-      thumbnail: editFields.thumbnail ?? null,
-      promo_video_url: editFields.promo_video_url ?? null,
-    };
-    await updateDjangoCourseAction(
-      editingCourse.slug,
-      fields,
-      editThumbFile ?? null
-    );
-    setSavingEdit(false);
-    window.location.reload();
   }
 
   // ===== RENDER =====
@@ -339,15 +297,16 @@ export function CoursesManager({
             />
           )}
 
-          {step === 3 && createdCourse && (
+          {step === 3 && (createdCourse || (step === 3 && createdCourse)) && (
             <RelatedEntitiesStep
-              course={createdCourse}
+              course={createdCourse!}
               outcomes={related.outcomes}
               highlights={related.highlights}
               learningPoints={related.learningPoints}
               modules={related.modules}
               lessons={related.lessons}
               videos={related.videos}
+              drLabs={drLabs}
               onBack={() => setStep(2)}
               onFinish={finishWizard}
               onRefreshRelated={refreshRelated}
@@ -366,187 +325,6 @@ export function CoursesManager({
             <span>{createError}</span>
           </div>
         )}
-      </div>
-    );
-  }
-
-  // Editing panel
-  if (editingCourse && editFields) {
-    const f = editFields;
-    const set = <K extends keyof CourseEditFields>(key: K, val: CourseEditFields[K]) =>
-      setEditFields((p) => ({ ...(p as CourseEditFields), [key]: val }));
-
-    return (
-      <div className="space-y-4">
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm font-semibold">Edit course — {editingCourse.title}</p>
-            <Button size="sm" onClick={saveEdit} disabled={savingEdit}>
-              {savingEdit ? "Saving…" : "Save course"}
-            </Button>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Field label="Title">
-              <input
-                value={f.title ?? ""}
-                onChange={(e) => set("title", e.target.value)}
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Subtitle">
-              <input
-                value={f.subtitle ?? ""}
-                onChange={(e) => set("subtitle", e.target.value)}
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Category">
-              <select
-                value={f.category ?? ""}
-                onChange={(e) => set("category", e.target.value)}
-                className={inputClass}
-              >
-                <option value="">Select category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Language">
-              <select
-                value={f.language ?? "english"}
-                onChange={(e) => set("language", e.target.value)}
-                className={inputClass}
-              >
-                <option value="english">English</option>
-                <option value="french">French</option>
-              </select>
-            </Field>
-            <Field label="Level">
-              <select
-                value={f.level ?? "all"}
-                onChange={(e) => set("level", e.target.value)}
-                className={inputClass}
-              >
-                <option value="all">All levels</option>
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
-              </select>
-            </Field>
-            <Field label="Status">
-              <select
-                value={f.status ?? "draft"}
-                onChange={(e) => set("status", e.target.value)}
-                className={inputClass}
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-              </select>
-            </Field>
-            <Field label="Price">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={f.price ?? "0"}
-                onChange={(e) => set("price", e.target.value)}
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Discount price">
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                value={f.discount_price ?? "0"}
-                onChange={(e) => set("discount_price", e.target.value)}
-                className={inputClass}
-              />
-            </Field>
-            <Field label="Thumbnail">
-              <div className="space-y-2">
-                <div className="inline-flex rounded-md border border-input bg-muted p-0.5">
-                  {(["upload", "link"] as const).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => {
-                        setEditThumbMode(m);
-                        setEditThumbFile(null);
-                        setEditThumbPreview(null);
-                        if (m === "upload") set("thumbnail", "");
-                      }}
-                      className={`rounded px-3 py-1 text-xs font-medium transition ${
-                        editThumbMode === m
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {m === "upload" ? "Upload image" : "Image link"}
-                    </button>
-                  ))}
-                </div>
-
-                {editThumbMode === "link" ? (
-                  <input
-                    value={f.thumbnail ?? ""}
-                    onChange={(e) => set("thumbnail", e.target.value)}
-                    className={inputClass}
-                  />
-                ) : (
-                  <div className="space-y-2">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0] ?? null;
-                        setEditThumbFile(file);
-                        if (file) {
-                          setEditThumbPreview(URL.createObjectURL(file));
-                          set("thumbnail", "");
-                        } else {
-                          setEditThumbPreview(null);
-                        }
-                      }}
-                      className="block w-full text-xs text-muted-foreground file:mr-3 file:h-9 file:rounded-md file:border-0 file:bg-muted file:px-3 file:text-sm file:text-foreground"
-                    />
-                    {editThumbPreview && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={editThumbPreview}
-                        alt="Thumbnail preview"
-                        className="h-24 w-full rounded-md border border-border object-cover"
-                      />
-                    )}
-                  </div>
-                )}
-              </div>
-            </Field>
-            <Field label="Promo video URL">
-              <input
-                value={f.promo_video_url ?? ""}
-                onChange={(e) => set("promo_video_url", e.target.value)}
-                className={inputClass}
-              />
-            </Field>
-            <div className="sm:col-span-2">
-              <Field label="Description">
-                <textarea
-                  rows={3}
-                  value={f.description ?? ""}
-                  onChange={(e) => set("description", e.target.value)}
-                  className={textareaClass}
-                />
-              </Field>
-            </div>
-          </div>
-        </div>
-        <Button variant="outline" onClick={() => setEditingCourse(null)}>
-          <X size={15} /> Close editor
-        </Button>
       </div>
     );
   }
@@ -598,26 +376,6 @@ export function CoursesManager({
           />
         )}
       />
-    </div>
-  );
-}
-
-const inputClass =
-  "h-9 w-full rounded-md border border-input bg-background px-3 text-sm";
-const textareaClass =
-  "w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1">
-      <label className="text-xs font-medium text-foreground">{label}</label>
-      {children}
     </div>
   );
 }

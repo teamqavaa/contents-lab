@@ -7,6 +7,7 @@ import {
   createDjangoModuleAction,
 } from "@/lib/admin-actions";
 import type { DjangoLesson, DjangoModule, DjangoVideo } from "@/lib/api/courses-api";
+import type { Lab } from "@/lib/api/lab-api";
 import { ModuleCard } from "./ModuleCard";
 
 const inputClass =
@@ -26,12 +27,14 @@ export function CurriculumPanel({
   modules,
   lessons,
   videos,
+  drLabs,
   onRefresh,
 }: {
   courseId: string;
   modules: DjangoModule[];
   lessons: DjangoLesson[];
   videos: DjangoVideo[];
+  drLabs: Lab[];
   onRefresh: () => void;
 }) {
   const sortedModules = [...modules].sort((a, b) => a.order - b.order);
@@ -75,6 +78,7 @@ export function CurriculumPanel({
           key={m.id}
           module={m}
           lessons={attachVideosToLessons(lessonsByModule[m.id] ?? [], videos)}
+          drLabs={drLabs}
           onRefresh={onRefresh}
         />
       ))}

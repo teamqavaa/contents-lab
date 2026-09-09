@@ -12,6 +12,7 @@ import type {
   DjangoModule,
   DjangoVideo,
 } from "@/lib/api/courses-api";
+import type { Lab } from "@/lib/api/lab-api";
 import { OutcomesPanel } from "./OutcomesPanel";
 import { HighlightsPanel } from "./HighlightsPanel";
 import { LearningPointsPanel } from "./LearningPointsPanel";
@@ -59,6 +60,7 @@ export function RelatedEntitiesStep({
   modules,
   lessons,
   videos,
+  drLabs,
   onBack,
   onFinish,
   onRefreshRelated,
@@ -70,6 +72,7 @@ export function RelatedEntitiesStep({
   modules: DjangoModule[];
   lessons: DjangoLesson[];
   videos: DjangoVideo[];
+  drLabs: Lab[];
   onBack: () => void;
   onFinish: () => void;
   onRefreshRelated: () => Promise<void>;
@@ -151,6 +154,7 @@ export function RelatedEntitiesStep({
                       modules={modules}
                       lessons={lessons}
                       videos={videos}
+                      drLabs={drLabs}
                       onRefresh={onRefreshRelated}
                     />
                   )}
