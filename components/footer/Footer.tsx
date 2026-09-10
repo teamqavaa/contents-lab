@@ -90,7 +90,7 @@ export default function Footer() {
               <div className="flex flex-col gap-3">
                 <h4 className="text-xs font-semibold text-neutral-900 tracking-wide uppercase">Explore</h4>
                 <ul className="flex flex-col gap-2.5 text-neutral-500">
-                  <li><Link href="#" className="hover:text-neutral-900 transition-colors">My feed</Link></li>
+                  <li><Link href="https://www.linkedin.com/company/qavaa-innovate-team/" className="hover:text-neutral-900 transition-colors" target="_blank">My feed</Link></li>
                   <li><Link href="#" className="hover:text-neutral-900 transition-colors">Case studies</Link></li>
                   <li><Link href="#" className="hover:text-neutral-900 transition-colors">Referral Program</Link></li>
                 </ul>
@@ -137,7 +137,7 @@ export default function Footer() {
                 <ul className="flex flex-col gap-2.5 text-neutral-500">
                   <li><Link href="#" className="hover:text-neutral-900 transition-colors">Support docs</Link></li>
                   <li><Link href="#" className="hover:text-neutral-900 transition-colors">Contact</Link></li>
-                  <li><Link href="#" className="hover:text-neutral-900 transition-colors">Join discord</Link></li>
+                  <li><Link href="https://www.linkedin.com/company/qavaa-innovate-team/" className="hover:text-neutral-900 transition-colors">Join Linkedin</Link></li>
                 </ul>
               </div>
 

@@ -1,7 +1,9 @@
-"use server";
+'use server';
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export async function handleCheckoutAction() {
   try {
@@ -9,7 +11,7 @@ export async function handleCheckoutAction() {
     const token = cookieStore.get("access_token")?.value;
 
     if (!token) {
-      return { success: false, error: "Utilisateur non authentifié." };
+      return { success: false, error: "User not authenticated." };
     }
 
     const headers: Record<string, string> = {
@@ -18,9 +20,7 @@ export async function handleCheckoutAction() {
       "Cookie": `access_token=${token}`,
     };
 
-    const CART_API_URL = process.env.NEXT_PUBLIC_CART_API_URL || "http://127.0.0.1:8080";
-
-    const response = await fetch(`${CART_API_URL}/api/orders/checkout/`, {
+    const response = await fetch(`${API_BASE_URL}/orders/checkout/`, {
       method: "POST",
       headers: headers,
     });
@@ -30,28 +30,25 @@ export async function handleCheckoutAction() {
     if (!response.ok) {
       return {
         success: false,
-        error: data.detail || data.message || "Erreur lors de la création de la commande.",
+        error: data.detail || data.message || "Error while creating the order.",
       };
     }
 
-    // Redirection automatique gérée par Next.js vers la page de paiement
+    // Automatic redirection handled by Next.js to the payment page
     redirect(`/checkout/payment?orderId=${data.id}`);
 
   } catch (error) {
-    // Ne pas intercepter l'erreur de redirection interne de Next.js
     if ((error as Error)?.message === "NEXT_REDIRECT") {
       throw error;
     }
 
-    console.error("Erreur dans handleCheckoutAction:", error);
+    console.error("Error in handleCheckoutAction:", error);
     return {
       success: false,
-      error: "Erreur réseau ou serveur inaccessible.",
+      error: "Network error or server unreachable.",
     };
   }
 }
-
-
 
 export async function initiatePayment(formData: FormData) {
   const orderId = formData.get("orderId");
@@ -69,7 +66,7 @@ export async function initiatePayment(formData: FormData) {
   }
 
   try {
-    const res = await fetch("http://127.0.0.1:8080/api/payments/initiate/", {
+    const res = await fetch(`${API_BASE_URL}/payments/initiate/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -103,7 +100,7 @@ export async function initiatePayment(formData: FormData) {
 
 export async function getOrderDetails(orderId: string) {
   if (!orderId) {
-    return { success: false, error: "Identifiant de commande manquant." };
+    return { success: false, error: "Missing order identifier." };
   }
 
   try {
@@ -111,12 +108,10 @@ export async function getOrderDetails(orderId: string) {
     const token = cookieStore.get("access_token")?.value;
 
     if (!token) {
-      return { success: false, error: "Utilisateur non authentifié." };
+      return { success: false, error: "User not authenticated." };
     }
 
-    const CART_API_URL = process.env.NEXT_PUBLIC_CART_API_URL || "http://127.0.0.1:8080";
-
-    const response = await fetch(`${CART_API_URL}/api/orders/${orderId}/`, {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -131,17 +126,16 @@ export async function getOrderDetails(orderId: string) {
     if (!response.ok) {
       return {
         success: false,
-        error: data.detail || "Impossible de récupérer les détails de la commande.",
+        error: data.detail || "Unable to retrieve order details.",
       };
     }
 
     return { success: true, data };
   } catch (error) {
-    console.error("Erreur dans getOrderDetails:", error);
+    console.error("Error in getOrderDetails:", error);
     return {
       success: false,
-      error: "Erreur serveur lors de la récupération de la commande.",
+      error: "Server error while retrieving the order.",
     };
   }
 }
-

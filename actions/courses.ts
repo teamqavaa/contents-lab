@@ -2,7 +2,6 @@
 
 import { getMyEnrolledCourses } from "./cart";
 
-// Interface représentant la réponse exacte de votre API Django / REST
 export interface ApiCategory {
   id: string;
   name: string;
@@ -15,12 +14,24 @@ export interface ApiTag {
   slug: string;
 }
 
+export interface ApiLesson {
+  id: string;
+  title: string;
+  duration_in_minutes: number;
+}
+
+export interface ApiModule {
+  id: string;
+  title: string;
+  lessons_count: number;
+  lessons: ApiLesson[];
+}
+
 export interface ApiCourse {
   id: string;
   category_details: ApiCategory;
-  tags: string[];
   tags_details: ApiTag[];
-  instructor_id: string;
+  modules: ApiModule[]; // 👈 Ajout des modules renvoyés par l'API
   title: string;
   slug: string;
   subtitle: string;
@@ -39,10 +50,10 @@ export interface ApiCourse {
   updated_at: string;
 }
 
-// Interface utilisée côté Frontend
 export interface Course {
   id: string;
   title: string;
+  subtitle: string;
   description: string;
   image: string;
   duration: string;
@@ -53,19 +64,15 @@ export interface Course {
   level: string;
   slug: string;
   category_details?: ApiCategory;
+  modules?: ApiModule[]; // 👈 Ajouté pour CourseCard
 }
 
 export interface CourseWithEnrollment extends Course {
   isEnrolled: boolean;
 }
 
-/**
- * @param limit Nombre de cours max à retourner (ex: 3 pour la page d'accueil).
- * Si non fourni, retourne tous les cours.
- */
 export async function getPopularCourses(limit?: number): Promise<CourseWithEnrollment[]> {
   try {
-    // 1. Récupérer en parallèle les cours et les vraies inscriptions de l'utilisateur connecté
     const [response, enrolledCourses] = await Promise.all([
       fetch('http://127.0.0.1:8080/api/courses/', {
         method: 'GET',
@@ -80,19 +87,14 @@ export async function getPopularCourses(limit?: number): Promise<CourseWithEnrol
 
     const apiCourses: ApiCourse[] = await response.json();
 
-    // 2. Extraire dynamiquement les IDs des cours où l'utilisateur est inscrit
     const enrollmentsList = Array.isArray(enrolledCourses) ? enrolledCourses : (enrolledCourses?.results || []);
     const enrolledCourseIds = new Set(
       enrollmentsList.map((course: any) => course.id || course.course_id || course.course?.id)
     );
 
-    // 3. Tri par popularité
     const sortedCourses = apiCourses.sort((a, b) => b.total_students - a.total_students);
-
-    // 4. Application de la limite si elle est spécifiée
     const coursesToReturn = limit ? sortedCourses.slice(0, limit) : sortedCourses;
 
-    // 5. Transformation des données de l'API vers le format React
     return coursesToReturn.map((course) => {
       const currentPrice = parseFloat(course.discount_price) > 0
         ? parseFloat(course.discount_price)
@@ -102,20 +104,46 @@ export async function getPopularCourses(limit?: number): Promise<CourseWithEnrol
         ? parseFloat(course.price)
         : undefined;
 
+      // Calcul dynamique de la durée totale en minutes et du nombre de leçons
+      let totalMinutes = 0;
+      let calculatedLessonsCount = 0;
+
+      if (course.modules && Array.isArray(course.modules)) {
+        course.modules.forEach((mod) => {
+          calculatedLessonsCount += mod.lessons_count || mod.lessons?.length || 0;
+          if (mod.lessons && Array.isArray(mod.lessons)) {
+            mod.lessons.forEach((lesson) => {
+              totalMinutes += lesson.duration_in_minutes || 0;
+            });
+          }
+        });
+      }
+
+      // Formatage propre de la durée (ex: "45m" ou "1h 15m")
+      const formatDuration = (mins: number) => {
+        if (mins === 0) return "N/A";
+        const hours = Math.floor(mins / 60);
+        const minutes = mins % 60;
+        if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`;
+        if (hours > 0) return `${hours}h`;
+        return `${minutes}m`;
+      };
+
       return {
         id: course.id,
         title: course.title,
         subtitle: course.subtitle,
         description: course.description,
         image: course.thumbnail,
-        duration: '20 hours 30 min',
-        lessonsCount: course.total_reviews || 0,
+        duration: formatDuration(totalMinutes),
+        lessonsCount: calculatedLessonsCount,
         rating: course.average_rating,
         price: currentPrice,
         originalPrice: originalPrice,
         level: course.level,
         slug: course.slug,
         category_details: course.category_details,
+        modules: course.modules, // 👈 Transmis au frontend
         isEnrolled: enrolledCourseIds.has(course.id),
       };
     });
@@ -124,8 +152,3 @@ export async function getPopularCourses(limit?: number): Promise<CourseWithEnrol
     return [];
   }
 }
-
-
-
-
-

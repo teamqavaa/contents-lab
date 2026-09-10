@@ -81,7 +81,7 @@ export default function CourseCard({ course, initialInCart }: CourseCardProps) {
             )}
           </div>
 
-          <AddToCartButton courseId={id} initialInCart={initialInCart} />
+          <AddToCartButton courseId={id} initialInCart={initialInCart} courseSlug={course.slug} />
         </div>
       </div>
     </div>

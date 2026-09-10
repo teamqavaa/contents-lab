@@ -77,13 +77,13 @@ export default function Banner() {
           {/* -- Éléments Flottants en Absolute -- */}
           {/* Badge 1 (Expert Tutor) */}
           <div className="absolute top-[30%] -left-12 hidden lg:block">
-            <FloatingBadge icon="tutor" title="100+" text="Expert tutor" />
+            <FloatingBadge icon="tutor" title="QI" text="Expert tutor" />
           </div>
 
 
           {/* Badge 2 (Video Courses) */}
           <div className="absolute top-[21%] -right-16 hidden lg:block">
-            <FloatingBadge icon="video" title="120+" text="Video courses" />
+            <FloatingBadge icon="video" title="Not only" text="Video courses" />
           </div>
 
         </div>

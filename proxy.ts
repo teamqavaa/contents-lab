@@ -2,7 +2,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PROTECTED_ROUTES = ['/dashboard', '/cart', '/settings', '/checkout', '/qavaa', '/profile', '/orders', '/account', '/payment', '/course/', '/learn', '/module', '/lesson'];
+// 🟢 Routes publiques autorisées sans token (vous pouvez en rajouter si besoin)
+const PUBLIC_ROUTES = ['/', '/login', '/register', '/api/auth'];
 
 export default function proxy(request: NextRequest) {
   // On lit le cookie "access_token" que vous posez réellement dans le callback
@@ -10,12 +11,18 @@ export default function proxy(request: NextRequest) {
   const userId = request.cookies.get('user_id')?.value;
 
   const { pathname, searchParams } = request.nextUrl;
-  const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
 
-  // 🔴 CAS 1 : Tentative d'accès à une route protégée sans token
-  if (isProtectedRoute && !token) {
+  // On vérifie si la page actuelle est une route publique
+  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith('/api/auth'));
+
+  // 🔴 CAS 1 : Tentative d'accès à N'IMPORTE QUELLE page non publique (y compris fausses 404 / pages privées) sans token
+  if (!isPublicRoute && !token) {
     const ssoLoginUrl = new URL('/api/auth/login', request.url);
-    ssoLoginUrl.searchParams.set('redirect', pathname);
+
+    // On capture le chemin complet avec ses query parameters pour y revenir exactement
+    const fullPathWithQuery = request.nextUrl.search ? `${pathname}${request.nextUrl.search}` : pathname;
+    ssoLoginUrl.searchParams.set('redirect', fullPathWithQuery);
+
     return NextResponse.redirect(ssoLoginUrl);
   }
 

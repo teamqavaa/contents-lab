@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Montserrat } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
-import LayoutWrapper from "@/components/LayoutWrapper";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
@@ -14,11 +13,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={montserrat.className}>
-      <body className="min-h-full flex flex-col">
-        <LayoutWrapper>
-          {children}
-        </LayoutWrapper>
+    <html lang="en" className={montserrat.className} suppressHydrationWarning>
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        {children}
       </body>
     </html>
   );

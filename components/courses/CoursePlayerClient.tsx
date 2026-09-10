@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft, X, PlayCircle, FileText, Download,
@@ -11,7 +11,117 @@ interface CoursePlayerClientProps {
   course: any;
 }
 
+// Isolated component using a container wrapper to completely isolate React's DOM from YouTube's DOM
+function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => void }) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const playerRef = useRef<any>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const initPlayer = () => {
+      if (!isMounted || !wrapperRef.current || !(window as any).YT || !(window as any).YT.Player) {
+        return;
+      }
+
+      // Cleanup previous player instance
+      if (playerRef.current && typeof playerRef.current.destroy === 'function') {
+        try {
+          playerRef.current.destroy();
+        } catch (e) {
+          // Ignore
+        }
+        playerRef.current = null;
+      }
+
+      // Clear container cleanly
+      wrapperRef.current.innerHTML = '';
+
+      // Create a dedicated sub-element for the YouTube iframe
+      const ytDiv = document.createElement('div');
+      ytDiv.style.width = '100%';
+      ytDiv.style.height = '100%';
+      wrapperRef.current.appendChild(ytDiv);
+
+      try {
+        playerRef.current = new (window as any).YT.Player(ytDiv, {
+          height: '100%',
+          width: '100%',
+          videoId: videoId,
+          playerVars: {
+            autoplay: 1,
+            modestbranding: 1,
+            rel: 0,
+            cc_load_policy: 0,
+            origin: window.location.origin,
+          },
+          events: {
+            onStateChange: (event: any) => {
+              if (event.data === 0) {
+                onEnded();
+              }
+            },
+          },
+        });
+      } catch (err) {
+        console.error("Error initializing YouTube player:", err);
+      }
+    };
+
+    if (!(window as any).YT) {
+      if (!document.getElementById('youtube-iframe-api')) {
+        const tag = document.createElement('script');
+        tag.id = 'youtube-iframe-api';
+        tag.src = 'https://www.youtube.com/iframe_api';
+        const firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag?.parentNode?.insertBefore(tag, firstScriptTag);
+      }
+    }
+
+    if ((window as any).YT && (window as any).YT.Player) {
+      initPlayer();
+    } else {
+      const previousReady = (window as any).onYouTubeIframeAPIReady;
+      (window as any).onYouTubeIframeAPIReady = () => {
+        if (previousReady) previousReady();
+        initPlayer();
+      };
+
+      const timer = setInterval(() => {
+        if ((window as any).YT && (window as any).YT.Player) {
+          clearInterval(timer);
+          initPlayer();
+        }
+      }, 300);
+
+      return () => {
+        isMounted = false;
+        clearInterval(timer);
+      };
+    }
+
+    return () => {
+      isMounted = false;
+      if (playerRef.current && typeof playerRef.current.destroy === 'function') {
+        try {
+          playerRef.current.destroy();
+        } catch (e) {
+          // Ignore
+        }
+        playerRef.current = null;
+      }
+      if (wrapperRef.current) {
+        wrapperRef.current.innerHTML = '';
+      }
+    };
+  }, [videoId, onEnded]);
+
+  return <div ref={wrapperRef} className="w-full h-full" />;
+}
+
 export default function CoursePlayerClient({ course }: CoursePlayerClientProps) {
+  const [mounted, setMounted] = useState(false);
+
   const allLessons = useMemo(() => {
     if (!course?.modules) return [];
     return course.modules.flatMap((module: any) =>
@@ -23,27 +133,38 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
     );
   }, [course]);
 
-  const initialLesson = allLessons.find((l: any) => l.lesson_type === 'VIDEO') || allLessons[0] || null;
+  const defaultLesson = useMemo(() => {
+    return allLessons.find((l: any) => l.lesson_type === 'VIDEO') || allLessons[0] || null;
+  }, [allLessons]);
 
-  const [activeLesson, setActiveLesson] = useState<any>(initialLesson);
+  const [activeLesson, setActiveLesson] = useState<any>(defaultLesson);
   const [activeTab, setActiveTab] = useState<'transcript' | 'notes' | 'resources'>('resources');
 
   const [openModules, setOpenModules] = useState<Record<string, boolean>>(() => {
-    if (initialLesson) {
-      return { [initialLesson.moduleId]: true };
+    if (defaultLesson) {
+      return { [defaultLesson.moduleId]: true };
     }
     return { [course?.modules?.[0]?.id]: true };
   });
 
+  const currentIndex = allLessons.findIndex((l: any) => l.id === activeLesson?.id);
+
   useEffect(() => {
-    console.log("LEÇON ACTIVE ACTUELLE :", activeLesson);
-  }, [activeLesson]);
+    setMounted(true);
+
+    if (window.location.hash) {
+      const hashSlug = window.location.hash.replace('#', '');
+      const foundByHash = allLessons.find((l: any) => l.slug === hashSlug || l.id === hashSlug);
+      if (foundByHash) {
+        setActiveLesson(foundByHash);
+        setOpenModules(prev => ({ ...prev, [foundByHash.moduleId]: true }));
+      }
+    }
+  }, [allLessons]);
 
   const toggleModule = (moduleId: string) => {
     setOpenModules(prev => ({ ...prev, [moduleId]: !prev[moduleId] }));
   };
-
-  const currentIndex = allLessons.findIndex((l: any) => l.id === activeLesson?.id);
 
   const handlePrevLesson = () => {
     if (currentIndex > 0) {
@@ -61,29 +182,35 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
     }
   };
 
+  useEffect(() => {
+    if (mounted && activeLesson) {
+      const identifier = activeLesson.slug || activeLesson.id;
+      if (identifier) {
+        window.history.replaceState(null, '', `#${identifier}`);
+      }
+    }
+  }, [activeLesson, mounted]);
+
   const activeVideoUrl = activeLesson?.video?.video_url ? String(activeLesson.video.video_url).trim() : null;
 
-  // MODIFICATION ICI : Ajout de 'autoplay=1' et 'cc_load_policy=0'
-  const getYouTubeEmbedUrl = (url: string) => {
+  const getYouTubeVideoId = (url: string) => {
     if (!url) return null;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
     const match = url.match(regExp);
-    return (match && match[2].length === 11)
-      ? `https://www.youtube.com/embed/${match[2]}?autoplay=1&modestbranding=1&rel=0&cc_load_policy=0`
-      : url;
+    return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  const embedUrl = activeVideoUrl ? getYouTubeEmbedUrl(activeVideoUrl) : null;
+  const videoId = activeVideoUrl ? getYouTubeVideoId(activeVideoUrl) : null;
   const currentResources = course.resources || [];
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-neutral-900 text-neutral-100 font-sans">
 
-      {/* ================= 1. SIDEBAR DE GAUCHE ================= */}
+      {/* ================= 1. LEFT SIDEBAR ================= */}
       <aside className="w-[380px] bg-white text-neutral-800 border-r border-neutral-200 flex flex-col h-full z-10 shrink-0">
         <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
           <Link
-            href={`/course/${course.slug}`}
+            href={`/courses/${course.slug}`}
             className="flex items-center gap-1.5 text-xs font-bold text-neutral-600 hover:text-neutral-950 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -167,61 +294,53 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
         </div>
       </aside>
 
-      {/* ================= 2. CONTENU PRINCIPAL & LECTEUR ================= */}
+      {/* ================= 2. MAIN CONTENT & PLAYER ================= */}
       <main className="flex-1 flex flex-col h-full overflow-y-auto bg-neutral-900">
 
-        {/* Lecteur iframe natif ultra-stable */}
-        <div className="w-full h-[400px] bg-neutral-950 relative flex items-center justify-center border-b border-neutral-800 shadow-2xl overflow-hidden shrink-0">
-          {embedUrl ? (
-            <iframe
-              key={embedUrl} // Important pour forcer le rechargement et déclencher l'autoplay au changement de leçon
-              src={embedUrl}
-              title={activeLesson?.title || "Video Player"}
-              className="w-full h-full border-0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-3 text-neutral-400 p-6 text-center">
-              <PlayCircle className="w-12 h-12 text-neutral-600" />
-              <div className="flex flex-col gap-1">
-                <p className="text-xs font-bold text-neutral-300">Aucune URL vidéo valide trouvée pour cette leçon</p>
-                <p className="text-[10px] text-red-400 max-w-sm font-mono bg-neutral-900 p-2 rounded border border-neutral-800">
-                  activeVideoUrl est : {String(activeVideoUrl)}
-                </p>
+        <div className="w-full bg-neutral-950 border-b border-neutral-800 shadow-2xl shrink-0 flex items-center justify-center">
+          <div className="w-full max-w-5xl aspect-video relative flex items-center justify-center">
+            {videoId && mounted ? (
+              <YouTubePlayer key={videoId} videoId={videoId} onEnded={handleNextLesson} />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-3 text-neutral-400 p-6 text-center w-full h-full">
+                <PlayCircle className="w-12 h-12 text-neutral-600" />
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs font-bold text-neutral-300">No valid video URL found for this lesson</p>
+                  <p className="text-[10px] text-red-400 max-w-sm font-mono bg-neutral-900 p-2 rounded border border-neutral-800">
+                    activeVideoUrl is: {String(activeVideoUrl)}
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-
-        <div className="bg-neutral-950 px-8 py-3 border-b border-neutral-800 flex items-center justify-between text-xs">
-          <button
-            onClick={handlePrevLesson}
-            disabled={currentIndex <= 0}
-            className="flex items-center gap-2 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400 transition-colors font-semibold"
-          >
-            <SkipBack className="w-4 h-4" />
-            <span>Leçon précédente</span>
-          </button>
-
-          <span className="text-neutral-500 font-medium">
-            Leçon {currentIndex + 1} sur {allLessons.length}
-          </span>
-
-          <button
-            onClick={handleNextLesson}
-            disabled={currentIndex >= allLessons.length - 1}
-            className="flex items-center gap-2 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400 transition-colors font-semibold"
-          >
-            <span>Leçon suivante</span>
-            <SkipForward className="w-4 h-4" />
-          </button>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 p-8 max-w-6xl w-full mx-auto flex flex-col gap-6">
-          <div className="flex flex-col gap-1">
-            <h2 className="text-xl font-bold text-white">{activeLesson?.title || course.title}</h2>
-            <p className="text-xs text-neutral-400 leading-relaxed">{activeLesson?.description || course.description}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-xl font-bold text-white">{activeLesson?.title || course.title}</h2>
+              <p className="text-xs text-neutral-400 leading-relaxed">{activeLesson?.description || course.description}</p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handlePrevLesson}
+                disabled={currentIndex <= 0}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white disabled:opacity-30 disabled:hover:bg-neutral-800 disabled:hover:text-neutral-300 transition-colors text-xs font-semibold"
+              >
+                <SkipBack className="w-3.5 h-3.5" />
+                <span>Previous</span>
+              </button>
+
+              <button
+                onClick={handleNextLesson}
+                disabled={currentIndex >= allLessons.length - 1}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white disabled:opacity-30 disabled:hover:bg-neutral-800 disabled:hover:text-neutral-300 transition-colors text-xs font-semibold"
+              >
+                <span>Next</span>
+                <SkipForward className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 border-b border-neutral-800 pb-3">
@@ -257,14 +376,14 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {currentResources.length > 0 ? (
                   currentResources.map((res: any) => (
-                    <div key={res.id} className="bg-neutral-800/60 border border-neutral-700/60 p-4 rounded-2xl flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-neutral-700 flex items-center justify-center text-blue-400 shrink-0 font-extrabold text-xs">
-                          {res.resource_type || 'DOC'}
-                        </div>
-                        <div className="flex flex-col gap-0.5 min-w-0">
+                    <div key={res.id} className="bg-neutral-800/60 border border-neutral-700/60 p-4 rounded-2xl flex items-center justify-between gap-4 overflow-hidden">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+
+                        <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                           <h4 className="text-xs font-bold text-white truncate">{res.title}</h4>
-                          <span className="text-[10px] text-neutral-400">{res.file_size_formatted || '94 KB'} • {res.description || 'Document officiel'}</span>
+                          <span className="text-[10px] text-neutral-400 truncate">
+                            {res.file_size_formatted || '94 KB'} • {res.description || res.external_url || 'Official Document'}
+                          </span>
                         </div>
                       </div>
                       <a
@@ -278,7 +397,7 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
                     </div>
                   ))
                 ) : (
-                  <div className="text-neutral-500 text-xs py-4">Aucune ressource disponible pour ce cours pour le moment.</div>
+                  <div className="text-neutral-500 text-xs py-4">No resources available for this course at the moment.</div>
                 )}
               </div>
             </div>
@@ -286,18 +405,18 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
 
           {activeTab === 'transcript' && (
             <div className="text-xs text-neutral-400 leading-relaxed bg-neutral-800/40 p-6 rounded-2xl border border-neutral-800">
-              Le transcript textuel de cette leçon est disponible ici.
+              Text transcript for this lesson is available here.
             </div>
           )}
 
           {activeTab === 'notes' && (
             <div className="flex flex-col gap-3">
               <textarea
-                placeholder="Prenez vos notes personnelles ici..."
+                placeholder="Take your personal notes here..."
                 className="w-full h-32 bg-neutral-800/40 border border-neutral-800 rounded-2xl p-4 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
               />
               <button className="self-end px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-colors">
-                Enregistrer la note
+                Save Note
               </button>
             </div>
           )}

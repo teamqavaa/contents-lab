@@ -7,11 +7,8 @@ interface CourseSidebarCardProps {
 }
 
 export default async function CourseSidebarCard({ course }: CourseSidebarCardProps) {
-  // 1. Récupération du panier côté serveur avec le token stocké dans les cookies
   const cart = await getMyCart();
 
-  // 2. Vérification si le cours actuel est présent dans les items du panier
-  // D'après votre interface CartItem, chaque item contient un objet "course_details" avec l'id
   const isInCart = cart?.items?.some(
     (item) => item.course_details?.id === course.id || item.course === course.id
   ) || false;
@@ -38,19 +35,19 @@ export default async function CourseSidebarCard({ course }: CourseSidebarCardPro
 
       {/* Passage direct de l'état initial au bouton */}
       <div className="w-full">
-        <AddToCartButton courseId={course.id} initialInCart={isInCart} />
+        <AddToCartButton courseId={course.id} initialInCart={isInCart} courseSlug={course.slug} />
       </div>
 
       {/* Inclus dans la formation */}
       <div className="flex flex-col gap-3 pt-4 border-t border-neutral-100">
         <span className="text-[11px] font-bold text-neutral-400 tracking-wider uppercase">
-          WHAT'S INCLUDED
+          WHAT&apos;S INCLUDED
         </span>
         <div className="flex flex-col gap-2.5 text-xs text-neutral-800 font-semibold">
-          {course.what_is_included?.map((item, idx) => (
-            <div key={idx} className="flex items-center gap-2.5">
+          {course.resources?.map((resource, idx) => (
+            <div key={resource.id || idx} className="flex items-center gap-2.5">
               <span className="text-neutral-900 font-bold">✓</span>
-              <span>{item}</span>
+              <span>{resource.title}</span>
             </div>
           ))}
         </div>

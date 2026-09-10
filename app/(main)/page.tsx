@@ -1,7 +1,7 @@
 // app/page.tsx (App A)
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import HomePage from "@/components/Home";
+import HomePage from "@/components/home/Home";
 
 export default async function Home({
   searchParams,

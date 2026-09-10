@@ -30,14 +30,14 @@ export async function GET(request: Request) {
 
   try {
     // Échange du code contre les tokens auprès de Django
-    const tokenResponse = await fetch("http://localhost:8000/o/token/", {
+    const tokenResponse = await fetch("http://localhost:8000/o/token/", { // url de base du SSO
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         grant_type: "authorization_code",
-        client_id: process.env.SSO_CLIENT_ID || "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX",
+        client_id: process.env.SSO_CLIENT_ID || "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX", // Client Id
         code: code,
-        redirect_uri: "http://localhost:3001/api/auth/callback",
+        redirect_uri: "http://localhost:3001/api/auth/callback", // Url de redirection du con
         code_verifier: codeVerifier,
       }),
     });

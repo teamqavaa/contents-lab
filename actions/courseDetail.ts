@@ -15,6 +15,46 @@ export interface ApiTag {
   slug: string;
 }
 
+export interface Highlight {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+export interface LearningPoint {
+  id: string;
+  title: string;
+}
+
+export interface Outcome {
+  id: string;
+  description: string;
+}
+
+export interface Lesson {
+  id: string;
+  title: string;
+  duration_in_minutes: number;
+}
+
+export interface Module {
+  id: string;
+  title: string;
+  description?: string;
+  lessons_count: number;
+  lessons: Lesson[];
+}
+
+export interface Resource {
+  id: string;
+  title: string;
+  description?: string;
+  resource_type: string;
+  file?: string | null;
+  external_url?: string;
+  file_size_formatted?: string;
+}
+
 export interface CourseDetails {
   id: string;
   category_details: ApiCategory;
@@ -42,17 +82,23 @@ export interface CourseDetails {
   who_this_is_for: string;
   learning_outcomes: string[];
   what_is_included: string[];
-  is_enrolled: boolean; // <-- Ajouté
+  is_enrolled: boolean;
+  highlights?: Highlight[];
+  learning_points?: LearningPoint[];
+  outcomes?: Outcome[];
+  modules?: Module[];
+  resources?: Resource[];
 }
+
+// Récupération de l'URL racine de l'API depuis l'environnement
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 export async function getCourseDetails(slug: string): Promise<CourseDetails | null> {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('access_token')?.value;
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8080';
-
-    const response = await fetch(`${API_URL}/api/courses/${slug}/`, {
+    const response = await fetch(`${API_BASE_URL}/courses/${slug}/`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -122,18 +168,15 @@ export async function getCourseDetails(slug: string): Promise<CourseDetails | nu
         'Private community access',
         'Lifetime access, all updates',
       ],
-      is_enrolled: data.is_enrolled ?? false, // <-- Récupéré directement de l'API
+      is_enrolled: data.is_enrolled ?? false,
+      highlights: data.highlights || [],
+      learning_points: data.learning_points || [],
+      outcomes: data.outcomes || [],
+      modules: data.modules || [],
+      resources: data.resources || [],
     };
   } catch (error) {
     console.error('Erreur getCourseDetails:', error);
     return null;
   }
 }
-
-
-
-
-
-
-
-
