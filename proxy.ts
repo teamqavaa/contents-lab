@@ -2,37 +2,37 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// 🟢 Routes publiques autorisées sans token (vous pouvez en rajouter si besoin)
-const PUBLIC_ROUTES = ['/', '/login', '/register', '/api/auth'];
+// 🟢 Define routes or prefixes that REQUIRE authentication
+const PROTECTED_ROUTES = ['/dashboard', '/course/', '/profile', '/settings', '/admin', '/api/protected', '/checkout', '/orders', '/account', '/subscription', '/qavaa', '/carts'];
 
 export default function proxy(request: NextRequest) {
-  // On lit le cookie "access_token" que vous posez réellement dans le callback
+  // Read the "access_token" cookie set during callback
   const token = request.cookies.get('access_token')?.value;
   const userId = request.cookies.get('user_id')?.value;
 
   const { pathname, searchParams } = request.nextUrl;
 
-  // On vérifie si la page actuelle est une route publique
-  const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname === route || pathname.startsWith('/api/auth'));
+  // Check if the current requested page starts with any of the protected route prefixes
+  const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
 
-  // 🔴 CAS 1 : Tentative d'accès à N'IMPORTE QUELLE page non publique (y compris fausses 404 / pages privées) sans token
-  if (!isPublicRoute && !token) {
+  // 🔴 CASE 1: Trying to access a PROTECTED route without a token -> Redirect to login
+  if (isProtectedRoute && !token) {
     const ssoLoginUrl = new URL('/api/auth/login', request.url);
 
-    // On capture le chemin complet avec ses query parameters pour y revenir exactement
+    // Capture the full path with its query parameters to return to it after logging in
     const fullPathWithQuery = request.nextUrl.search ? `${pathname}${request.nextUrl.search}` : pathname;
     ssoLoginUrl.searchParams.set('redirect', fullPathWithQuery);
 
     return NextResponse.redirect(ssoLoginUrl);
   }
 
-  // 🟢 CAS 2 : Déjà connecté et sur la racine "/" avec un paramètre "redirect"
-  if (pathname === '/' && token && searchParams.has('redirect')) {
+  // 🟢 CASE 2: Already logged in and visiting the root "/" or login with a "redirect" parameter
+  if ((pathname === '/' || pathname === '/login') && token && searchParams.has('redirect')) {
     const redirectTo = searchParams.get('redirect') || '/dashboard';
     return NextResponse.redirect(new URL(redirectTo, request.url));
   }
 
-  // 🟢 CAS 3 : Propagation des en-têtes d'authentification
+  // 🟢 CASE 3: Propagate authentication headers for downstream requests/API calls
   const requestHeaders = new Headers(request.headers);
 
   if (token) {
