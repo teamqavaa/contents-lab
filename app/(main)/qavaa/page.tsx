@@ -1,10 +1,10 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { PartyPopper, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import { getOrderDetails } from "@/actions/checkout"; // Importez la Server Action
+import { getOrderDetails } from "@/actions/checkout";
 
 interface OrderItem {
   id: string;
@@ -20,7 +20,8 @@ interface Order {
   items: OrderItem[];
 }
 
-export default function QavaaSuccessPage() {
+// 1. Composant interne contenant le hook `useSearchParams()`
+function QavaaSuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("order_id");
 
@@ -53,59 +54,66 @@ export default function QavaaSuccessPage() {
   }, [orderId]);
 
   return (
-    <main className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
-      <div className="max-w-4xl w-full bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-
-        {/* Left side: Joyful icon and success message */}
-        <div className="flex flex-col items-center md:items-start text-center md:text-left gap-4">
-          <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center animate-bounce">
-            <PartyPopper className="w-8 h-8" />
-          </div>
-
-          <h1 className="text-2xl font-bold text-neutral-900">
-            Congratulations!
-          </h1>
-
-          <p className="text-neutral-600 text-sm leading-relaxed">
-            You have successfully registered for this course/exam. Your payment has been validated and your access is now active.
-          </p>
-
-          <Link
-            href="/dashboard"
-            className="mt-4 px-6 py-3 bg-black text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition-colors"
-          >
-            Go to my courses
-          </Link>
+    <div className="max-w-4xl w-full bg-white rounded-2xl shadow-sm border border-neutral-200 p-8 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+      {/* Left side: Joyful icon and success message */}
+      <div className="flex flex-col items-center md:items-start text-center md:text-left gap-4">
+        <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center animate-bounce">
+          <PartyPopper className="w-8 h-8" />
         </div>
 
-        {/* Right side: List of courses in the order */}
-        <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-100 flex flex-col gap-4">
-          <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
-            Included Courses / Exams
-          </h2>
+        <h1 className="text-2xl font-bold text-neutral-900">
+          Congratulations!
+        </h1>
 
-          {loading ? (
-            <p className="text-sm text-neutral-500">Loading courses...</p>
-          ) : order && order.items ? (
-            <div className="flex flex-col gap-3">
-              {order.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between p-3 bg-white rounded-lg border border-neutral-200"
-                >
-                  <span className="text-sm font-semibold text-neutral-800">
-                    {item.course?.title || "Cours sans titre"}
-                  </span>
-                  <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-500">Order details not available.</p>
-          )}
-        </div>
+        <p className="text-neutral-600 text-sm leading-relaxed">
+          You have successfully registered for this course/exam. Your payment has been validated and your access is now active.
+        </p>
 
+        <Link
+          href="/dashboard"
+          className="mt-4 px-6 py-3 bg-black text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition-colors"
+        >
+          Go to my courses
+        </Link>
       </div>
+
+      {/* Right side: List of courses in the order */}
+      <div className="bg-neutral-50 rounded-xl p-6 border border-neutral-100 flex flex-col gap-4">
+        <h2 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+          Included Courses / Exams
+        </h2>
+
+        {loading ? (
+          <p className="text-sm text-neutral-500">Loading courses...</p>
+        ) : order && order.items ? (
+          <div className="flex flex-col gap-3">
+            {order.items.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between p-3 bg-white rounded-lg border border-neutral-200"
+              >
+                <span className="text-sm font-semibold text-neutral-800">
+                  {item.course?.title || "Cours sans titre"}
+                </span>
+                <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-neutral-500">Order details not available.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// 2. Composant de page principal qui applique le `<Suspense>` autour du sous-composant
+export default function QavaaSuccessPage() {
+  return (
+    <main className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
+      <Suspense fallback={<p className="text-sm text-neutral-500">Loading...</p>}>
+        <QavaaSuccessContent />
+      </Suspense>
     </main>
   );
 }

@@ -234,6 +234,7 @@ export default function MostPopularCard() {
                     key={currentCourse.id}
                     courseId={currentCourse.id}
                     initialInCart={isInCart}
+                    courseSlug={currentCourse.slug}
                   />
                 </div>
 

@@ -3,6 +3,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import HomePage from "@/components/home/Home";
 
+// Forcer Next.js à traiter cette page comme dynamic (évite l'erreur au prerender)
+export const dynamic = "force-dynamic";
+
 export default async function Home({
   searchParams,
 }: {
@@ -21,10 +24,5 @@ export default async function Home({
     redirect(destination);
   }
 
-  // Sinon, on affiche la page d'accueil normale
-  return (
-    <>
-      <HomePage />
-    </>
-  );
+  return <HomePage />;
 }
