@@ -9,7 +9,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Browse Courses', href: '/courses' },
-  { label: 'Explore Careers', href: '/careers' },
+  { label: 'Explore Careers', href: '/career-tracks' },
 ];
 
 export default function NavLinks() {

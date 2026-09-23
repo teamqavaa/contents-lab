@@ -74,7 +74,7 @@ export interface CourseWithEnrollment extends Course {
 export async function getPopularCourses(limit?: number): Promise<CourseWithEnrollment[]> {
   try {
     const [response, enrolledCourses] = await Promise.all([
-      fetch('http://127.0.0.1:8080/api/courses/', {
+      fetch('https://contents-lab-api-5jbnazjbya-ew.a.run.app/api/courses/', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       }),
