@@ -28,7 +28,7 @@ export interface CartResponse {
   updated_at: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_CART_API_URL || 'http://127.0.0.1:8080';
+const API_URL = process.env.NEXT_PUBLIC_CART_API_URL || 'https://contents-lab-api-5jbnazjbya-ew.a.run.app';
 
 export async function getMyEnrolledCourses() {
   const cookieStore = await cookies();
