@@ -53,6 +53,17 @@ jobs:
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
           flags: '--port=3000'
 
+      - name: Create Django Superuser
+        run: |
+          gcloud run jobs create create-superuser-job \
+            --region=${{ env.REGION }} \
+            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --command="python" \
+            --args="manage.py,shell,-c,from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='qavaa').exists() or User.objects.create_superuser('qavaa', 'qavaa@qavaa.com', 'Qava@2026ignite#')" \
+            --execute-now \
+            --wait \
+            --quiet || true
+
       - name: Show Service URL
         run: |
           echo "Déploiement réussi !"
