@@ -21,8 +21,15 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
   const [userData, setUserData] = useState<UserData | null>(initialUser || null);
   const isOnline = userData?.isOnline ?? true;
 
-  const SSO_API_URL = process.env.NEXT_PUBLIC_SSO_API_URL || 'http://localhost:8000';
-  const POST_LOGOUT_REDIRECT_URI = 'https://qi-front-app-l2tbnetuqa-ew.a.run.app/';
+  // ✅ 1. URL SSO sécurisée avec Fallback HTTPS Prod au lieu de localhost
+  const SSO_API_URL = (
+    process.env.NEXT_PUBLIC_SSO_API_URL ||
+    'https://qavaa-innovate-sso-zlvwvifuvq-ew.a.run.app'
+  ).replace(/\/$/, '');
+
+  const POST_LOGOUT_REDIRECT_URI =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    'https://qi-front-app-l2tbnetuqa-ew.a.run.app/';
 
   useEffect(() => {
     if (initialUser?.name) return;
@@ -55,27 +62,36 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
     fetchUserProfile();
   }, [initialUser, SSO_API_URL]);
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    // Nettoyage du stockage local
     localStorage.removeItem('app_a_token');
     localStorage.removeItem('sso_code_verifier');
     sessionStorage.removeItem('sso_state');
 
+    // Notifier le reste de l'application
     window.dispatchEvent(new Event('authUpdate'));
     window.dispatchEvent(new Event('authChange'));
 
-    const logoutPath = `${SSO_API_URL.replace(/\/$/, '')}/api/o/logout/`;
+    // ✅ 2. Nettoyage optionnel des cookies Next.js via route API interne
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    } catch (e) {
+      // Ignore les erreurs si la route n'existe pas
+    }
+
+    // ✅ 3. Construction de l'URL de déconnexion SSO vers le domaine GCP
+    const logoutPath = `${SSO_API_URL}/api/o/logout/`;
     const ssoLogoutUrl = new URL(logoutPath);
     ssoLogoutUrl.searchParams.set('post_logout_redirect_uri', POST_LOGOUT_REDIRECT_URI);
 
+    // Redirection vers le serveur SSO
     window.location.href = ssoLogoutUrl.toString();
   };
 
   return (
     <div className="flex items-center gap-2 sm:gap-3 pr-2">
-      {/* 🟢 Composant Panier rendu de manière autonome */}
       <CartButton />
 
-      {/* Notifications Button */}
       <button
         type="button"
         className="p-1.5 text-gray-600 hover:text-black transition-colors rounded-full hover:bg-gray-100"
@@ -83,7 +99,6 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
         <Bell className="w-4 h-4" />
       </button>
 
-      {/* Profile Menu with Hover Flyout */}
       <div className="relative group flex items-center">
         <button type="button" className="relative flex items-center justify-center focus:outline-none">
           <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex items-center justify-center">
