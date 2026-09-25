@@ -22,7 +22,7 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
   const isOnline = userData?.isOnline ?? true;
 
   const SSO_API_URL = process.env.NEXT_PUBLIC_SSO_API_URL || 'http://localhost:8000';
-  const POST_LOGOUT_REDIRECT_URI = 'http://localhost:3001/';
+  const POST_LOGOUT_REDIRECT_URI = 'https://qi-front-app-l2tbnetuqa-ew.a.run.app/';
 
   useEffect(() => {
     if (initialUser?.name) return;
