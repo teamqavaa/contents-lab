@@ -4,14 +4,27 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 
 export async function GET(request: Request) {
-  const { searchParams, host } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const mode = searchParams.get("mode") || "login";
 
-  // 1. Détection dynamique du protocole et de l'hôte (ex: localhost:3001) pour un REDIRECT_URI 100% raccord
-  const protocol = request.headers.get("x-forwarded-proto") || "http";
-  const REDIRECT_URI = `${protocol}://${host}/api/auth/callback`;
+  // 1. URL de base du SSO avec Fallback obligatoire
+  const SSO_BASE_URL =
+    process.env.NEXT_PUBLIC_SSO_URL ||
+    "https://sso-front-mp3dhl7baq-ew.a.run.app";
 
-  // 2. Génération PKCE & State
+  const CLIENT_ID =
+    process.env.SSO_CLIENT_ID ||
+    "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX";
+
+  // 2. Détection dynamique du protocole et de l'hôte pour le REDIRECT_URI
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host") || "localhost:3000";
+  const protocol = request.headers.get("x-forwarded-proto") || "http";
+
+  // Utiliser localhost au lieu de 0.0.0.0 si le serveur écoute sur toutes les interfaces
+  const cleanHost = host.startsWith("0.0.0.0") ? host.replace("0.0.0.0", "localhost") : host;
+  const REDIRECT_URI = `${protocol}://${cleanHost}/api/auth/callback`;
+
+  // 3. Génération PKCE & State
   const verifier = crypto.randomBytes(32).toString("hex");
   const challenge = crypto
     .createHash("sha256")
@@ -19,7 +32,7 @@ export async function GET(request: Request) {
     .digest("base64url");
   const state = crypto.randomBytes(16).toString("hex");
 
-  // 3. Sauvegarde des cookies PKCE
+  // 4. Sauvegarde des cookies PKCE
   const cookieStore = await cookies();
   cookieStore.set("sso_code_verifier", verifier, {
     httpOnly: true,
@@ -36,14 +49,10 @@ export async function GET(request: Request) {
     maxAge: 600,
   });
 
-  // 4. Configuration des URLs
-  const SSO_BASE_URL = process.env.NEXT_PUBLIC_SSO_URL || "http://localhost:3000";
-  const CLIENT_ID = process.env.SSO_CLIENT_ID || "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX";
-
-  // 🚨 CORRECTION : On pointe TOUJOURS sur la racine "/" car c'est la seule route publique dans proxy.ts
+  // 5. Configuration dynamique de l'URL SSO
   const ssoUrl = new URL("/", SSO_BASE_URL);
 
-  ssoUrl.searchParams.set("mode", mode); // On passe le mode en paramètre (login ou register)
+  ssoUrl.searchParams.set("mode", mode);
   ssoUrl.searchParams.set("client_id", CLIENT_ID);
   ssoUrl.searchParams.set("redirect_uri", REDIRECT_URI);
   ssoUrl.searchParams.set("response_type", "code");
@@ -51,6 +60,6 @@ export async function GET(request: Request) {
   ssoUrl.searchParams.set("code_challenge", challenge);
   ssoUrl.searchParams.set("code_challenge_method", "S256");
 
-  // 5. Redirection explicite HTTP 302
+  // 6. Redirection explicite HTTP 302 vers le serveur SSO externe
   return NextResponse.redirect(ssoUrl.toString(), { status: 302 });
 }

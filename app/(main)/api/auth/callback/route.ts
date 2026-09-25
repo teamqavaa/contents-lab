@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         grant_type: "authorization_code",
         client_id: process.env.SSO_CLIENT_ID || "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX", // Client Id
         code: code,
-        redirect_uri: process.env.NEXT_PUBLIC_SSO_REDIRECT_URI || "http://localhost:3001/api/auth/callback", // Url de redirection du con
+        redirect_uri: process.env.NEXT_PUBLIC_SSO_REDIRECT_URI , // Url de redirection du con
         code_verifier: codeVerifier,
       }),
     });
