@@ -41,7 +41,15 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           IMAGE_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
-          docker build -t $IMAGE_TAG .
+
+          docker build \
+            --build-arg NEXT_PUBLIC_SSO_URL="https://sso-front-mp3dhl7baq-ew.a.run.app" \
+            --build-arg NEXT_PUBLIC_SSO_API_URL="https://qavaa-innovate-sso-zlvwvifuvq-ew.a.run.app" \
+            --build-arg NEXT_PUBLIC_SSO_CLIENT_ID="o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX" \
+            --build-arg NEXT_PUBLIC_SSO_REDIRECT_URI="https://qi-front-app-l2tbnetuqa-ew.a.run.app/api/auth/callback" \
+            --build-arg NEXT_PUBLIC_API_BASE_URL="https://contents-lab-api-5jbnazjbya-ew.a.run.app/api" \
+            -t $IMAGE_TAG .
+
           docker push $IMAGE_TAG
 
       - name: Deploy to Cloud Run
@@ -51,7 +59,12 @@ jobs:
           service: ${{ env.SERVICE_NAME }}
           region: ${{ env.REGION }}
           image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.SERVICE_NAME }}:${{ github.sha }}
-          flags: '--port=3000'
+          flags: '--port=8080'
+          env_vars: |
+            SSO_CLIENT_ID=o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX
+            SSO_CLIENT_SECRET=${{ secrets.SSO_CLIENT_SECRET }}
+            REDIRECT_URI=https://qi-front-app-l2tbnetuqa-ew.a.run.app/api/auth/callback
+            NEXT_PUBLIC_SSO_URL=https://sso-front-mp3dhl7baq-ew.a.run.app
 
       - name: Show Service URL
         run: |
