@@ -21,21 +21,24 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
   const [userData, setUserData] = useState<UserData | null>(initialUser || null);
   const isOnline = userData?.isOnline ?? true;
 
-  // ✅ 1. URL SSO sécurisée avec Fallback HTTPS Prod au lieu de localhost
   const SSO_API_URL = (
     process.env.NEXT_PUBLIC_SSO_API_URL ||
     'https://qavaa-innovate-sso-zlvwvifuvq-ew.a.run.app'
   ).replace(/\/$/, '');
 
-  const POST_LOGOUT_REDIRECT_URI =
+  const BASE_APP_URL = (
     process.env.NEXT_PUBLIC_APP_URL ||
-    'https://qi-front-app-l2tbnetuqa-ew.a.run.app/';
+    'https://qi-front-app-l2tbnetuqa-ew.a.run.app'
+  ).replace(/\/$/, '');
 
   useEffect(() => {
     if (initialUser?.name) return;
 
     const token = localStorage.getItem('app_a_token');
-    if (!token) return;
+    if (!token) {
+      setUserData(null);
+      return;
+    }
 
     async function fetchUserProfile() {
       try {
@@ -53,6 +56,10 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
             avatarUrl: data.picture || data.avatar_url,
             isOnline: true,
           });
+        } else {
+          // Si le jeton est expiré ou invalide, on efface les données
+          localStorage.removeItem('app_a_token');
+          setUserData(null);
         }
       } catch (err) {
         console.error('Error fetching user profile:', err);
@@ -63,28 +70,32 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
   }, [initialUser, SSO_API_URL]);
 
   const handleSignOut = async () => {
-    // Nettoyage du stockage local
-    localStorage.removeItem('app_a_token');
-    localStorage.removeItem('sso_code_verifier');
-    sessionStorage.removeItem('sso_state');
+    // 1. Vidage immédiat du State React local
+    setUserData(null);
 
-    // Notifier le reste de l'application
+    // 2. Nettoyage de tout le stockage navigateur
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // 3. Notifier l'application
     window.dispatchEvent(new Event('authUpdate'));
     window.dispatchEvent(new Event('authChange'));
 
-    // ✅ 2. Nettoyage optionnel des cookies Next.js via route API interne
+    // 4. Appel de la route API Next.js interne (pour supprimer les cookies Next.js s'ils existent)
     try {
-      await fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+      await fetch('/api/auth/logout', { method: 'POST' });
     } catch (e) {
-      // Ignore les erreurs si la route n'existe pas
+      // Ignorer si la route n'existe pas
     }
 
-    // ✅ 3. Construction de l'URL de déconnexion SSO vers le domaine GCP
+    // 5. Redirection finale vers le SSO pour détruire la session backend
+    const targetRedirect = `${BASE_APP_URL}/login`;
     const logoutPath = `${SSO_API_URL}/api/o/logout/`;
     const ssoLogoutUrl = new URL(logoutPath);
-    ssoLogoutUrl.searchParams.set('post_logout_redirect_uri', POST_LOGOUT_REDIRECT_URI);
 
-    // Redirection vers le serveur SSO
+    ssoLogoutUrl.searchParams.set('post_logout_redirect_uri', targetRedirect);
+    ssoLogoutUrl.searchParams.set('next', targetRedirect);
+
     window.location.href = ssoLogoutUrl.toString();
   };
 
@@ -115,7 +126,7 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
             )}
           </div>
 
-          {isOnline && (
+          {isOnline && userData && (
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" />
           )}
         </button>
@@ -137,7 +148,7 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
                     <User className="w-4 h-4 text-gray-500" />
                   )}
                 </div>
-                {isOnline && (
+                {isOnline && userData && (
                   <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border border-white rounded-full" />
                 )}
               </div>
@@ -145,7 +156,9 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
                 <span className="text-xs font-semibold text-gray-800 truncate">
                   {userData?.name || 'User'}
                 </span>
-                <span className="text-[10px] text-emerald-600 font-medium">Online</span>
+                <span className="text-[10px] text-emerald-600 font-medium">
+                  {userData ? 'Online' : 'Offline'}
+                </span>
               </div>
             </div>
 
