@@ -57,7 +57,6 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
             isOnline: true,
           });
         } else {
-          // Si le jeton est expiré ou invalide, on efface les données
           localStorage.removeItem('app_a_token');
           setUserData(null);
         }
@@ -70,26 +69,33 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
   }, [initialUser, SSO_API_URL]);
 
   const handleSignOut = async () => {
-    // 1. Vidage immédiat du State React local
+    // 1. Vidage du State React local
     setUserData(null);
 
-    // 2. Nettoyage de tout le stockage navigateur
+    // 2. Nettoyage complet du Storage Navigateur
     localStorage.clear();
     sessionStorage.clear();
 
-    // 3. Notifier l'application
+    // 3. Suppression manuelle des cookies accessibles côté client JS
+    document.cookie.split(';').forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, '')
+        .replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
+    });
+
+    // 4. Notifier l'application
     window.dispatchEvent(new Event('authUpdate'));
     window.dispatchEvent(new Event('authChange'));
 
-    // 4. Appel de la route API Next.js interne (pour supprimer les cookies Next.js s'ils existent)
+    // 5. Appel de la route API Next.js interne pour supprimer les cookies côté Next.js
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (e) {
       // Ignorer si la route n'existe pas
     }
 
-    // 5. Redirection finale vers le SSO pour détruire la session backend
-    const targetRedirect = `${BASE_APP_URL}/login`;
+    // 🎯 6. Redirection vers la page d'accueil https://qi-front-app-l2tbnetuqa-ew.a.run.app/
+    const targetRedirect = `${BASE_APP_URL}/`;
     const logoutPath = `${SSO_API_URL}/api/o/logout/`;
     const ssoLogoutUrl = new URL(logoutPath);
 
