@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { User, Settings, LogOut, Bell, Loader2 } from 'lucide-react';
@@ -21,6 +21,9 @@ interface UserMenuProps {
 export default function UserMenu({ user: initialUser }: UserMenuProps) {
   const [userData, setUserData] = useState<UserData | null>(initialUser || null);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  // Verrou pour empêcher tout re-fetch pendant la déconnexion
+  const isLoggingOutRef = useRef(false);
+
   const isOnline = userData?.isOnline ?? true;
 
   const SSO_API_URL = (
@@ -35,7 +38,8 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
   }, [initialUser]);
 
   useEffect(() => {
-    if (initialUser?.name) return;
+    // Ne rien exécuter si initialUser existe ou si la déconnexion est en cours
+    if (initialUser?.name || isLoggingOutRef.current) return;
 
     const token = localStorage.getItem('app_a_token');
     if (!token) {
@@ -53,12 +57,15 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
 
         if (res.ok) {
           const data = await res.json();
-          setUserData({
-            name: data.name || data.first_name || data.username || data.email,
-            email: data.email,
-            avatarUrl: data.picture || data.avatar_url,
-            isOnline: true,
-          });
+          // Vérifier une deuxième fois que nous ne sommes pas en cours de déconnexion
+          if (!isLoggingOutRef.current) {
+            setUserData({
+              name: data.name || data.first_name || data.username || data.email,
+              email: data.email,
+              avatarUrl: data.picture || data.avatar_url,
+              isOnline: true,
+            });
+          }
         } else {
           localStorage.removeItem('app_a_token');
           setUserData(null);
@@ -73,32 +80,37 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
 
   const handleSignOut = async () => {
     if (isLoggingOut) return;
+
+    // 1. Déposer le verrou IMMÉDIATEMENT
+    isLoggingOutRef.current = true;
     setIsLoggingOut(true);
 
+    // 2. VIDAGE STRICT ET IMMÉDIAT du navigateur (avant toute requête async)
+    setUserData(null);
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // Effacer les cookies accessibles JS
+    document.cookie.split(';').forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, '')
+        .replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/');
+    });
+
+    // Émettre les événements d'actualisation globale
+    window.dispatchEvent(new Event('authUpdate'));
+    window.dispatchEvent(new Event('authChange'));
+
     try {
-      // 1. Appel de la Server Action pour révoquer et nettoyer côté serveur Next.js
+      // 3. Exécuter l'action serveur Next.js pour vider les cookies HttpOnly et révoquer les jetons
       const { ssoLogoutUrl } = await logoutAction();
 
-      // 2. Nettoyage du stockage local du navigateur
-      setUserData(null);
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // Suppression des cookies non HTTP-Only accessibles au client JS
-      document.cookie.split(';').forEach((c) => {
-        document.cookie = c
-          .replace(/^ +/, '')
-          .replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/');
-      });
-
-      window.dispatchEvent(new Event('authUpdate'));
-      window.dispatchEvent(new Event('authChange'));
-
-      // 3. Redirection du navigateur vers l'URL SSO générée par la Server Action
+      // 4. Redirection forcée vers l'API SSO
       window.location.href = ssoLogoutUrl;
     } catch (error) {
       console.error('Erreur lors de la déconnexion SSO:', error);
-      setIsLoggingOut(false);
+      // En cas d'erreur, forcer la redirection vers l'accueil frontend local
+      window.location.href = '/';
     }
   };
 
