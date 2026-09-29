@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { User, Settings, LogOut, Bell, Loader2 } from 'lucide-react';
 import CartButton from '@/components/CartButton';
+import { logoutAction } from '@/actions/auth';
 
 interface UserData {
   name?: string;
@@ -25,11 +26,6 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
   const SSO_API_URL = (
     process.env.NEXT_PUBLIC_SSO_API_URL ||
     'https://qavaa-innovate-sso-zlvwvifuvq-ew.a.run.app'
-  ).replace(/\/$/, '');
-
-  const BASE_APP_URL = (
-    process.env.NEXT_PUBLIC_APP_URL ||
-    'https://qi-front-app-l2tbnetuqa-ew.a.run.app'
   ).replace(/\/$/, '');
 
   useEffect(() => {
@@ -79,67 +75,31 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
     if (isLoggingOut) return;
     setIsLoggingOut(true);
 
-    // 1. Récupération des tokens de session locaux avant nettoyage
-    const accessToken = localStorage.getItem('app_a_token');
-    const idToken = localStorage.getItem('id_token'); // id_token requis par OAuth2/OIDC pour déconnexion globale
-
-    // 2. Révocation active des tokens auprès du serveur SSO
-    if (accessToken) {
-      try {
-        await fetch(`${SSO_API_URL}/o/revoke_token/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            token: accessToken,
-            client_id: process.env.NEXT_PUBLIC_SSO_CLIENT_ID || '', // Optionnel selon config Django/OAuth2
-          }),
-        });
-      } catch (e) {
-        console.error('Erreur lors de la révocation du jeton SSO:', e);
-      }
-    }
-
-    // 3. Appel de la route API interne Next.js pour effacer les cookies de session côté serveur Next
     try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+      // 1. Appel de la Server Action pour révoquer et nettoyer côté serveur Next.js
+      const { ssoLogoutUrl } = await logoutAction();
+
+      // 2. Nettoyage du stockage local du navigateur
+      setUserData(null);
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Suppression des cookies non HTTP-Only accessibles au client JS
+      document.cookie.split(';').forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, '')
+          .replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/');
       });
-    } catch (e) {
-      console.error('Erreur lors du nettoyage de la session Next.js:', e);
+
+      window.dispatchEvent(new Event('authUpdate'));
+      window.dispatchEvent(new Event('authChange'));
+
+      // 3. Redirection du navigateur vers l'URL SSO générée par la Server Action
+      window.location.href = ssoLogoutUrl;
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion SSO:', error);
+      setIsLoggingOut(false);
     }
-
-    // 4. Nettoyage complet du stockage du navigateur
-    setUserData(null);
-    localStorage.clear();
-    sessionStorage.clear();
-
-    document.cookie.split(';').forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, '')
-        .replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/');
-    });
-
-    window.dispatchEvent(new Event('authUpdate'));
-    window.dispatchEvent(new Event('authChange'));
-
-    // 5. Redirection OIDC Single Log Out (SLO) vers le serveur SSO
-    const targetRedirect = `${BASE_APP_URL}/`;
-    // L'endpoint OIDC officiel est souvent `/o/logout/` ou `/protocol/openid-connect/logout`
-    const logoutPath = `${SSO_API_URL}/o/logout/`;
-    const ssoLogoutUrl = new URL(logoutPath);
-
-    if (idToken) {
-      ssoLogoutUrl.searchParams.set('id_token_hint', idToken);
-    }
-    ssoLogoutUrl.searchParams.set('post_logout_redirect_uri', targetRedirect);
-    ssoLogoutUrl.searchParams.set('next', targetRedirect);
-
-    // Redirection globale vers le serveur SSO pour résilier la session centrale
-    window.location.href = ssoLogoutUrl.toString();
   };
 
   return (
