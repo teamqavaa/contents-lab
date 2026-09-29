@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { User, Settings, LogOut, Bell } from 'lucide-react';
+import { User, Settings, LogOut, Bell, Loader2 } from 'lucide-react';
 import CartButton from '@/components/CartButton';
 
 interface UserData {
@@ -19,6 +19,7 @@ interface UserMenuProps {
 
 export default function UserMenu({ user: initialUser }: UserMenuProps) {
   const [userData, setUserData] = useState<UserData | null>(initialUser || null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const isOnline = userData?.isOnline ?? true;
 
   const SSO_API_URL = (
@@ -30,6 +31,13 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
     process.env.NEXT_PUBLIC_APP_URL ||
     'https://qi-front-app-l2tbnetuqa-ew.a.run.app'
   ).replace(/\/$/, '');
+
+  // Garder le state en synchronisation avec les props serveur
+  useEffect(() => {
+    if (initialUser) {
+      setUserData(initialUser);
+    }
+  }, [initialUser]);
 
   useEffect(() => {
     if (initialUser?.name) return;
@@ -69,40 +77,47 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
   }, [initialUser, SSO_API_URL]);
 
   const handleSignOut = async () => {
-    // 1. Vidage du State React local
-    setUserData(null);
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
 
-    // 2. Nettoyage complet du Storage Navigateur
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // 3. Suppression manuelle des cookies accessibles côté client JS
-    document.cookie.split(';').forEach((c) => {
-      document.cookie = c
-        .replace(/^ +/, '')
-        .replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
-    });
-
-    // 4. Notifier l'application
-    window.dispatchEvent(new Event('authUpdate'));
-    window.dispatchEvent(new Event('authChange'));
-
-    // 5. Appel de la route API Next.js interne pour supprimer les cookies côté Next.js
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      // 1. Appel de la route API Next.js interne pour supprimer les cookies HttpOnly (access_token & refresh_token)
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
     } catch (e) {
-      // Ignorer si la route n'existe pas
+      console.error('Erreur lors de la suppression des cookies serveur Next.js:', e);
+    } finally {
+      // 2. Vidage du State React local
+      setUserData(null);
+
+      // 3. Nettoyage complet du Storage Navigateur
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // 4. Suppression manuelle des cookies accessibles côté JS
+      document.cookie.split(';').forEach((c) => {
+        document.cookie = c
+          .replace(/^ +/, '')
+          .replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/');
+      });
+
+      // 5. Notification globale des événements de l'app
+      window.dispatchEvent(new Event('authUpdate'));
+      window.dispatchEvent(new Event('authChange'));
+
+      // 🎯 6. Redirection vers le SSO pour résilier la session distante puis revenir sur l'accueil
+      const targetRedirect = `${BASE_APP_URL}/`;
+      const logoutPath = `${SSO_API_URL}/api/o/logout/`;
+      const ssoLogoutUrl = new URL(logoutPath);
+
+      ssoLogoutUrl.searchParams.set('post_logout_redirect_uri', targetRedirect);
+      ssoLogoutUrl.searchParams.set('next', targetRedirect);
+
+      window.location.href = ssoLogoutUrl.toString();
     }
-
-    // 🎯 6. Redirection vers la page d'accueil https://qi-front-app-l2tbnetuqa-ew.a.run.app/
-    const targetRedirect = `${BASE_APP_URL}/`;
-    const logoutPath = `${SSO_API_URL}/api/o/logout/`;
-    const ssoLogoutUrl = new URL(logoutPath);
-
-    ssoLogoutUrl.searchParams.set('post_logout_redirect_uri', targetRedirect);
-    ssoLogoutUrl.searchParams.set('next', targetRedirect);
-
-    window.location.href = ssoLogoutUrl.toString();
   };
 
   return (
@@ -180,10 +195,15 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium cursor-pointer"
+                disabled={isLoggingOut}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <LogOut className="w-3.5 h-3.5 text-red-500" />
-                Sign Out
+                {isLoggingOut ? (
+                  <Loader2 className="w-3.5 h-3.5 text-red-500 animate-spin" />
+                ) : (
+                  <LogOut className="w-3.5 h-3.5 text-red-500" />
+                )}
+                {isLoggingOut ? 'Signing out...' : 'Sign Out'}
               </button>
             </div>
           </div>
