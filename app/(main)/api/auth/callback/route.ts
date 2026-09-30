@@ -1,4 +1,4 @@
-// app/api/auth/callback/route.ts (App A)
+// app/api/auth/callback/route.ts
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
@@ -48,13 +48,31 @@ export async function GET(request: Request) {
       tokenParams.client_secret = process.env.SSO_CLIENT_SECRET;
     }
 
-    const tokenResponse = await fetch(`${SSO_API_URL}/o/token/`, {
+    const tokenUrl = `${SSO_API_URL}/o/token/`;
+    console.log("📡 Envoi requête échange de token vers:", tokenUrl);
+
+    const tokenResponse = await fetch(tokenUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json"
+      },
       body: new URLSearchParams(tokenParams),
     });
 
-    const tokens = await tokenResponse.json();
+    // 1. Lire d'abord sous forme de texte brut
+    const responseText = await tokenResponse.text();
+
+    // 2. Tenter de parser en JSON de manière sécurisée
+    let tokens: any = {};
+    try {
+      tokens = JSON.parse(responseText);
+    } catch {
+      console.error("🔴 Réponse non-JSON du serveur SSO (Status", tokenResponse.status, "):", responseText.slice(0, 300));
+      return NextResponse.redirect(
+        new URL(`/login?error=${encodeURIComponent(`SSO returned HTTP ${tokenResponse.status} non-JSON response`)}`, BASE_URL)
+      );
+    }
 
     if (!tokenResponse.ok) {
       console.error("🔴 Erreur échange token Django:", tokens);
@@ -62,7 +80,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(errorMsg)}`, BASE_URL));
     }
 
-    // Stockage des cookies
+    // 3. Sauvegarde des tokens
     if (tokens.access_token) {
       cookieStore.set("access_token", tokens.access_token, {
         httpOnly: true,
@@ -81,7 +99,6 @@ export async function GET(request: Request) {
       });
     }
 
-    // Nettoyage des verifiers
     cookieStore.delete('sso_state');
     cookieStore.delete('sso_code_verifier');
 
@@ -89,8 +106,6 @@ export async function GET(request: Request) {
 
   } catch (err: any) {
     console.error("🚨 Exception échange token:", err);
-    // Affichage explicite de l'erreur dans l'URL pour un diagnostic facile
-    const errorMsg = encodeURIComponent(err?.message || "server_error");
-    return NextResponse.redirect(new URL(`/login?error=${errorMsg}`, BASE_URL));
+    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(err?.message || 'server_error')}`, BASE_URL));
   }
 }
