@@ -1,3 +1,4 @@
+// actions/auth.ts
 'use server';
 
 import { cookies } from 'next/headers';
@@ -5,7 +6,7 @@ import { cookies } from 'next/headers';
 export async function logoutAction() {
   const cookieStore = await cookies();
 
-  // 1. Suppression de tous les cookies Next.js serveur
+  // 1. Purge des cookies côté Next.js
   const allCookies = cookieStore.getAll();
   for (const cookie of allCookies) {
     cookieStore.delete(cookie.name);
@@ -21,12 +22,12 @@ export async function logoutAction() {
     'https://qi-front-app-l2tbnetuqa-ew.a.run.app'
   ).replace(/\/$/, '');
 
-  // 🎯 Redirection explicite vers /login
   const targetRedirect = `${appUrl}/login`;
 
-  const logoutUrl = new URL(`${ssoApiUrl}/api/o/logout`);
-  logoutUrl.searchParams.set('next', targetRedirect);
+  // 🎯 Endpoint exact défini dans votre urls.py racine
+  const logoutUrl = new URL(`${ssoApiUrl}/api/o/logout/`);
   logoutUrl.searchParams.set('post_logout_redirect_uri', targetRedirect);
+  logoutUrl.searchParams.set('next', targetRedirect);
 
   return {
     success: true,

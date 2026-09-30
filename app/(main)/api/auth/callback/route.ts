@@ -15,13 +15,16 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const code = searchParams.get('code');
-  const error = searchParams.get('error');
+  const errorParam = searchParams.get('error');
 
-  if (error) {
-    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(error)}`, BASE_URL));
+  // Ignorer les erreurs JS passées en paramètre pour éviter les boucles
+  if (errorParam && !errorParam.includes("Unexpected token")) {
+    console.error("🔴 Erreur renvoyée par le SSO :", errorParam);
+    return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(errorParam)}`, BASE_URL));
   }
 
   if (!code) {
+    console.error("🔴 Code d'autorisation manquant");
     return NextResponse.redirect(new URL('/login?error=missing_code', BASE_URL));
   }
 
@@ -29,8 +32,15 @@ export async function GET(request: Request) {
   const codeVerifier = cookieStore.get('sso_code_verifier')?.value;
 
   const REDIRECT_URI = process.env.NEXT_PUBLIC_SSO_REDIRECT_URI || `${BASE_URL}/api/auth/callback`;
-  const SSO_API_URL = (process.env.NEXT_PUBLIC_SSO_API_URL || "https://qavaa-innovate-sso-zlvwvifuvq-ew.a.run.app").replace(/\/$/, "");
+  const SSO_API_URL = (
+    process.env.NEXT_PUBLIC_SSO_API_URL ||
+    "https://qavaa-innovate-sso-zlvwvifuvq-ew.a.run.app"
+  ).replace(/\/$/, "");
+
   const CLIENT_ID = process.env.SSO_CLIENT_ID || process.env.NEXT_PUBLIC_SSO_CLIENT_ID || "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX";
+
+  // 🎯 Cible exacte selon votre urls.py racine
+  const tokenEndpoint = `${SSO_API_URL}/o/token/`;
 
   try {
     const tokenParams: Record<string, string> = {
@@ -48,10 +58,7 @@ export async function GET(request: Request) {
       tokenParams.client_secret = process.env.SSO_CLIENT_SECRET;
     }
 
-    const tokenUrl = `${SSO_API_URL}/o/token/`;
-    console.log("📡 Envoi requête échange de token vers:", tokenUrl);
-
-    const tokenResponse = await fetch(tokenUrl, {
+    const tokenResponse = await fetch(tokenEndpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -60,27 +67,25 @@ export async function GET(request: Request) {
       body: new URLSearchParams(tokenParams),
     });
 
-    // 1. Lire d'abord sous forme de texte brut
     const responseText = await tokenResponse.text();
 
-    // 2. Tenter de parser en JSON de manière sécurisée
-    let tokens: any = {};
+    let tokens: any = null;
     try {
       tokens = JSON.parse(responseText);
     } catch {
       console.error("🔴 Réponse non-JSON du serveur SSO (Status", tokenResponse.status, "):", responseText.slice(0, 300));
       return NextResponse.redirect(
-        new URL(`/login?error=${encodeURIComponent(`SSO returned HTTP ${tokenResponse.status} non-JSON response`)}`, BASE_URL)
+        new URL(`/login?error=${encodeURIComponent(`SSO_HTTP_${tokenResponse.status}`)}`, BASE_URL)
       );
     }
 
-    if (!tokenResponse.ok) {
-      console.error("🔴 Erreur échange token Django:", tokens);
-      const errorMsg = tokens.error_description || tokens.error || "token_exchange_failed";
+    if (!tokenResponse.ok || !tokens) {
+      console.error("🔴 Erreur échange token Django :", tokens);
+      const errorMsg = tokens?.error_description || tokens?.error || "token_exchange_failed";
       return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(errorMsg)}`, BASE_URL));
     }
 
-    // 3. Sauvegarde des tokens
+    // Sauvegarde des cookies de session
     if (tokens.access_token) {
       cookieStore.set("access_token", tokens.access_token, {
         httpOnly: true,
@@ -99,6 +104,17 @@ export async function GET(request: Request) {
       });
     }
 
+    if (tokens.refresh_token) {
+      cookieStore.set("refresh_token", tokens.refresh_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    }
+
+    // Nettoyage des verifiers PKCE
     cookieStore.delete('sso_state');
     cookieStore.delete('sso_code_verifier');
 
