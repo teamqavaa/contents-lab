@@ -1,12 +1,11 @@
-// actions/auth.ts
 'use server';
 
 import { cookies } from 'next/headers';
 
-export async function logoutAction(idToken?: string) {
+export async function logoutAction() {
   const cookieStore = await cookies();
 
-  // 1. Purge des cookies côté Next.js
+  // 1. Purge de tous les cookies locaux de l'application cliente
   const allCookies = cookieStore.getAll();
   for (const cookie of allCookies) {
     cookieStore.delete(cookie.name);
@@ -24,15 +23,10 @@ export async function logoutAction(idToken?: string) {
 
   const targetRedirect = `${appUrl}/login`;
 
-  // 🎯 Endpoint exact défini dans votre urls.py racine
+  // 🎯 Construction de l'URL de déconnexion vers le SSO
   const logoutUrl = new URL(`${ssoApiUrl}/api/o/logout/`);
   logoutUrl.searchParams.set('post_logout_redirect_uri', targetRedirect);
   logoutUrl.searchParams.set('next', targetRedirect);
-
-  // 🔑 Ajout de l'id_token_hint si présent pour activer la déconnexion globale OIDC
-  if (idToken) {
-    logoutUrl.searchParams.set('id_token_hint', idToken);
-  }
 
   return {
     success: true,
