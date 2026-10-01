@@ -3,7 +3,7 @@
 
 import { cookies } from 'next/headers';
 
-export async function logoutAction() {
+export async function logoutAction(idToken?: string) {
   const cookieStore = await cookies();
 
   // 1. Purge des cookies côté Next.js
@@ -28,6 +28,11 @@ export async function logoutAction() {
   const logoutUrl = new URL(`${ssoApiUrl}/api/o/logout/`);
   logoutUrl.searchParams.set('post_logout_redirect_uri', targetRedirect);
   logoutUrl.searchParams.set('next', targetRedirect);
+
+  // 🔑 Ajout de l'id_token_hint si présent pour activer la déconnexion globale OIDC
+  if (idToken) {
+    logoutUrl.searchParams.set('id_token_hint', idToken);
+  }
 
   return {
     success: true,

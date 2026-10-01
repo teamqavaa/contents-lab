@@ -85,6 +85,9 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
     isLoggingOutRef.current = true;
     setIsLoggingOut(true);
 
+    // 🔑 Récupérer l'id_token stocké localement AVANT de vider le localStorage
+    const idToken = localStorage.getItem('id_token') || undefined;
+
     // 2. VIDAGE STRICT ET IMMÉDIAT du navigateur (avant toute requête async)
     setUserData(null);
     localStorage.clear();
@@ -102,10 +105,10 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
     window.dispatchEvent(new Event('authChange'));
 
     try {
-      // 3. Exécuter l'action serveur Next.js pour vider les cookies HttpOnly et révoquer les jetons
-      const { ssoLogoutUrl } = await logoutAction();
+      // 3. Exécuter l'action serveur Next.js en lui passant l'idToken pour la déconnexion globale OIDC
+      const { ssoLogoutUrl } = await logoutAction(idToken);
 
-      // 4. Redirection forcée vers l'API SSO
+      // 4. Redirection forcée vers l'API SSO avec l'indice de déconnexion
       window.location.href = ssoLogoutUrl;
     } catch (error) {
       console.error('Erreur lors de la déconnexion SSO:', error);
