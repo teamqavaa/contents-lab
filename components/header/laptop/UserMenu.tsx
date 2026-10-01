@@ -85,16 +85,23 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
     isLoggingOutRef.current = true;
     setIsLoggingOut(true);
 
-    // 🔑 2. Récupérer l'id_token (localStorage en priorité, puis repli dans les cookies du navigateur)
+    // 🔑 Extraction robuste de l'id_token (localStorage OU parsing précis de tous les cookies)
     let idToken = localStorage.getItem('id_token') || undefined;
+
     if (!idToken) {
-      const match = document.cookie.match(new RegExp('(^| )id_token=([^;]+)'));
-      if (match) {
-        idToken = match[2];
+      const cookies = document.cookie.split(';');
+      for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'id_token' && value) {
+          idToken = decodeURIComponent(value);
+          break;
+        }
       }
     }
 
-    // 3. VIDAGE STRICT ET IMMÉDIAT du navigateur (avant toute requête async)
+    console.log("ID Token récupéré pour la déconnexion globale:", idToken ? "Présent ✅" : "Absent ❌");
+
+    // 2. VIDAGE STRICT ET IMMÉDIAT du navigateur
     setUserData(null);
     localStorage.clear();
     sessionStorage.clear();
@@ -106,22 +113,21 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
         .replace(/=.*/, '=;expires=' + new Date(0).toUTCString() + ';path=/');
     });
 
-    // Émettre les événements d'actualisation globale
     window.dispatchEvent(new Event('authUpdate'));
     window.dispatchEvent(new Event('authChange'));
 
     try {
-      // 4. Exécuter l'action serveur Next.js en lui passant l'idToken pour la déconnexion globale OIDC
+      // 3. Appel de l'action serveur avec l'idToken trouvé
       const { ssoLogoutUrl } = await logoutAction(idToken);
 
-      // 5. Redirection forcée vers l'API SSO avec l'indice de déconnexion
+      // 4. Redirection vers le SSO avec l'id_token_hint cette fois-ci inclus
       window.location.href = ssoLogoutUrl;
     } catch (error) {
       console.error('Erreur lors de la déconnexion SSO:', error);
-      // En cas d'erreur, forcer la redirection vers l'accueil frontend local
       window.location.href = '/';
     }
   };
+
 
   return (
     <div className="flex items-center gap-2 sm:gap-3 pr-2">
