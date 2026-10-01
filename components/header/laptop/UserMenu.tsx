@@ -85,10 +85,16 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
     isLoggingOutRef.current = true;
     setIsLoggingOut(true);
 
-    // 🔑 Récupérer l'id_token stocké localement AVANT de vider le localStorage
-    const idToken = localStorage.getItem('id_token') || undefined;
+    // 🔑 2. Récupérer l'id_token (localStorage en priorité, puis repli dans les cookies du navigateur)
+    let idToken = localStorage.getItem('id_token') || undefined;
+    if (!idToken) {
+      const match = document.cookie.match(new RegExp('(^| )id_token=([^;]+)'));
+      if (match) {
+        idToken = match[2];
+      }
+    }
 
-    // 2. VIDAGE STRICT ET IMMÉDIAT du navigateur (avant toute requête async)
+    // 3. VIDAGE STRICT ET IMMÉDIAT du navigateur (avant toute requête async)
     setUserData(null);
     localStorage.clear();
     sessionStorage.clear();
@@ -105,10 +111,10 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
     window.dispatchEvent(new Event('authChange'));
 
     try {
-      // 3. Exécuter l'action serveur Next.js en lui passant l'idToken pour la déconnexion globale OIDC
+      // 4. Exécuter l'action serveur Next.js en lui passant l'idToken pour la déconnexion globale OIDC
       const { ssoLogoutUrl } = await logoutAction(idToken);
 
-      // 4. Redirection forcée vers l'API SSO avec l'indice de déconnexion
+      // 5. Redirection forcée vers l'API SSO avec l'indice de déconnexion
       window.location.href = ssoLogoutUrl;
     } catch (error) {
       console.error('Erreur lors de la déconnexion SSO:', error);
