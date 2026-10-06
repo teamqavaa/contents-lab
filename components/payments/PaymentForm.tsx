@@ -26,13 +26,20 @@ export default function PaymentForm({ orderId }: PaymentFormProps) {
   useEffect(() => {
     async function fetchProviders() {
       try {
+        console.log("Fetching from:", `${API_BASE_URL}/payment-providers/`);
         const response = await fetch(`${API_BASE_URL}/payment-providers/`);
         if (!response.ok) throw new Error("Erreur lors de la récupération des modes de paiement.");
         const data = await response.json();
-        // Filtrer uniquement les prestataires actifs
-        const activeProviders = data.filter((p: PaymentProvider) => p.is_active);
+
+        console.log("Données reçues :", data);
+
+        // Filtrer explicitement
+        const activeProviders = data.filter((p: PaymentProvider) => p.is_active === true);
+        console.log("Actifs filtrés :", activeProviders);
+
         setProviders(activeProviders);
       } catch (err: any) {
+        console.error("Erreur:", err);
         setError(err.message || "Impossible de charger les paiements.");
       } finally {
         setFetching(false);
