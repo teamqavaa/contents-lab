@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 
-export async function logoutAction() {
+export async function logoutAction(idToken?: string) {
   const cookieStore = await cookies();
 
   // 1. Purge de tous les cookies locaux de l'application cliente
@@ -27,6 +27,10 @@ export async function logoutAction() {
   const logoutUrl = new URL(`${ssoApiUrl}/api/o/logout/`);
   logoutUrl.searchParams.set('post_logout_redirect_uri', targetRedirect);
   logoutUrl.searchParams.set('next', targetRedirect);
+
+  if (idToken) {
+    logoutUrl.searchParams.set('id_token_hint', idToken);
+  }
 
   return {
     success: true,
