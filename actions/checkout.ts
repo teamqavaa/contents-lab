@@ -34,8 +34,16 @@ export async function handleCheckoutAction() {
       };
     }
 
+    // Récupération sécurisée de l'ID (supporte .id, .uuid, .order_id ou un objet .order)
+    const orderId = data.id || data.uuid || data.order_id || data.order?.id;
+
+    if (!orderId) {
+      console.error("Réponse de commande reçue sans ID valide :", data);
+      return { success: false, error: "order_not_found" };
+    }
+
     // Automatic redirection handled by Next.js to the payment page
-    redirect(`/checkout/payment?orderId=${data.id}`);
+    redirect(`/checkout/payment?orderId=${orderId}`);
 
   } catch (error) {
     if ((error as Error)?.message === "NEXT_REDIRECT") {
