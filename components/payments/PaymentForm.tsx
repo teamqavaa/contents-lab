@@ -1,7 +1,9 @@
-"use client";
+'use client';
 
 import { initiatePayment } from "@/actions/checkout";
 import { useState, useEffect } from "react";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 interface PaymentProvider {
   id: string;
@@ -24,7 +26,7 @@ export default function PaymentForm({ orderId }: PaymentFormProps) {
   useEffect(() => {
     async function fetchProviders() {
       try {
-        const response = await fetch("http://127.0.0.1:8080/api/payment-providers/");
+        const response = await fetch(`${API_BASE_URL}/payment-providers/`);
         if (!response.ok) throw new Error("Erreur lors de la récupération des modes de paiement.");
         const data = await response.json();
         // Filtrer uniquement les prestataires actifs
