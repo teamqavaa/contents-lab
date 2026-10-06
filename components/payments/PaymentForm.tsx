@@ -3,7 +3,8 @@
 import { initiatePayment } from "@/actions/checkout";
 import { useState, useEffect } from "react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+// Fallback direct vers l'API de production si la variable d'environnement était vide au build
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://contents-lab-api-5jbnazjbya-ew.a.run.app/api";
 
 interface PaymentProvider {
   id: string;
