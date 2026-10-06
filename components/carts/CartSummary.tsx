@@ -15,15 +15,24 @@ export default function CartSummary({ subtotal, totalPrice }: CartSummaryProps) 
   const formattedSubtotal = !isNaN(parseFloat(subtotal)) ? parseFloat(subtotal).toFixed(2) : '0.00';
   const formattedTotal = !isNaN(parseFloat(totalPrice)) ? parseFloat(totalPrice).toFixed(2) : '0.00';
 
- const onCheckoutClick = async () => {
+  const onCheckoutClick = async () => {
     setIsLoading(true);
     try {
-      await handleCheckoutAction();
-    } catch (error) {
+      const result = await handleCheckoutAction();
+
+      // Si l'action serveur retourne un échec explicitement
+      if (result && result.success === false) {
+        window.location.href = `/carts?error=${encodeURIComponent(result.error || 'order_not_found')}`;
+      }
+    } catch (error: any) {
       // Si Next.js fait une redirection, il lance une exception spéciale qu'on laisse passer
-      console.error(error);
+      if (error?.message === "NEXT_REDIRECT") {
+        throw error;
+      }
+      console.error("Erreur dans onCheckoutClick:", error);
+      window.location.href = '/carts?error=order_not_found';
     } finally {
-      // S'assure que le bouton se débloque quoiqu'il arrive
+      // S'assure que le bouton se débloque quoiqu'il arrive (si pas de redirection immédiate)
       setIsLoading(false);
     }
   };
