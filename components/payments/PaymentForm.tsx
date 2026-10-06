@@ -92,7 +92,7 @@ export default function PaymentForm({ orderId }: PaymentFormProps) {
             </label>
           ))}
           {providers.length === 0 && (
-            <p className="text-sm text-red-500">Aucun moyen de paiement actif disponible.</p>
+            <p className="text-sm text-red-500">No active payment methods available.</p>
           )}
         </div>
       </div>
