@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 interface PageProps {
   searchParams: Promise<{ orderId?: string }>;
 }
@@ -22,9 +24,11 @@ export default async function PaymentPage({ searchParams }: PageProps) {
     redirect("/login");
   }
 
-  const res = await fetch(`http://127.0.0.1:8080/api/orders/${orderId}/`, {
+  const res = await fetch(`${API_BASE_URL}/orders/${orderId}/`, {
     headers: {
-      Cookie: `access_token=${accessToken}`,
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${accessToken}`,
+      "Cookie": `access_token=${accessToken}`,
     },
     cache: "no-store",
   });
@@ -76,8 +80,6 @@ export default async function PaymentPage({ searchParams }: PageProps) {
 
           {/* Colonne de droite : Méthodes de paiement et Bouton */}
           <div className="flex flex-col gap-6">
-
-
             {/* Formulaire de paiement contenant le bouton */}
             <PaymentForm orderId={order.id} />
           </div>

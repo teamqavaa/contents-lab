@@ -20,31 +20,17 @@ export async function handleCheckoutAction() {
       "Cookie": `access_token=${token}`,
     };
 
-    const targetUrl = `${API_BASE_URL}/orders/checkout/`;
-    console.log("Tentative de checkout vers l'URL :", targetUrl);
-
-    const response = await fetch(targetUrl, {
+    const response = await fetch(`${API_BASE_URL}/orders/checkout/`, {
       method: "POST",
       headers: headers,
     });
 
-    const responseText = await response.text();
-    console.log("Statut de la réponse API:", response.status);
-    console.log("Corps brut de la réponse API:", responseText);
-
-    let data;
-    try {
-      data = JSON.parse(responseText);
-    } catch (e) {
-      console.error("L'API n'a pas renvoyé du JSON valide (probablement une erreur HTML de Cloud Run)");
-      return { success: false, error: "invalid_api_response" };
-    }
+    const data = await response.json();
 
     if (!response.ok) {
-      console.error("Erreur HTTP de l'API:", response.status, data);
       return {
         success: false,
-        error: data.detail || data.message || `API Error ${response.status}`,
+        error: data.detail || data.message || "Error while creating the order.",
       };
     }
 
@@ -56,7 +42,6 @@ export async function handleCheckoutAction() {
       return { success: false, error: "order_not_found" };
     }
 
-    console.log("Checkout réussi, redirection vers l'ordre ID :", orderId);
     // Automatic redirection handled by Next.js to the payment page
     redirect(`/checkout/payment?orderId=${orderId}`);
 
