@@ -15,14 +15,24 @@ export interface ConnectedUser {
 export async function getConnectedUser(): Promise<ConnectedUser | null> {
   try {
     const cookieStore = await cookies();
+
+    // 1. Vérification des cookies
     const accessToken = cookieStore.get('access_token')?.value;
-    const userId = cookieStore.get('user_id')?.value; // 👈 Récupéré dynamiquement du cookie
+    const userId = cookieStore.get('user_id')?.value;
+
+    console.log("----------------------------------------");
+    console.log("🔍 [DEBUG] access_token présent :", !!accessToken);
+    console.log("🔍 [DEBUG] access_token valeur :", accessToken ? accessToken.substring(0, 15) + "..." : "ABSENT");
+    console.log("🔍 [DEBUG] user_id présent :", userId || "ABSENT");
 
     if (!accessToken || !userId) {
+      console.warn("⚠️ [DEBUG] Arrêt : Token ou User ID manquant dans les cookies.");
       return null;
     }
 
+    // 2. Construction et test de l'URL SSO
     const url = `https://qavaa-innovate-sso-zlvwvifuvq-ew.a.run.app/api/users/${userId}/`;
+    console.log("🚀 [DEBUG] URL de l'appel SSO :", url);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -33,15 +43,22 @@ export async function getConnectedUser(): Promise<ConnectedUser | null> {
       cache: 'no-store',
     });
 
+    console.log("📥 [DEBUG] Statut HTTP reçu du SSO :", response.status, response.statusText);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ [DEBUG] Corps de l'erreur SSO :", errorText);
       return null;
     }
 
     const userData: ConnectedUser = await response.json();
+    console.log("✅ [DEBUG] Données utilisateur récupérées avec succès :", userData);
+    console.log("----------------------------------------");
+
     return userData;
 
   } catch (error) {
-    console.error('Erreur getConnectedUser:', error);
+    console.error('🚨 [DEBUG] Erreur critique attrapée dans getConnectedUser :', error);
     return null;
   }
 }
