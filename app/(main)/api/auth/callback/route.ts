@@ -54,11 +54,9 @@ export async function GET(request: Request) {
     }
 
     if (!tokenRes.ok) {
-      // 🔍 DIAGNOSTIC DÉTAILLÉ
       const detailError = tokenData.error_description || tokenData.error || tokenRes.statusText;
       console.error("🔴 ÉCHEC ECHANGE TOKEN DJANGO :", tokenRes.status, tokenData);
 
-      // Affiche le motif exact dans l'URL d'erreur au lieu du message générique
       return NextResponse.redirect(
         `${APP_URL}/login?error=${encodeURIComponent(`SSO_${tokenRes.status}_${detailError}`)}`
       );
@@ -81,6 +79,36 @@ export async function GET(request: Request) {
         path: "/",
         maxAge: 30 * 86400,
       });
+    }
+
+    // 🟢 EXTRACTION ET STOCKAGE DE L'ID DU USER DEPUIS L'ID TOKEN OIDC
+    if (tokenData.id_token) {
+      try {
+        const base64Url = tokenData.id_token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split('')
+            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+            .join('')
+        );
+        const payload = JSON.parse(jsonPayload);
+
+        // Récupération de l'identifiant (sub ou user_id)
+        const userId = payload.sub || payload.user_id;
+
+        if (userId) {
+          cookieStore.set("user_id", userId, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "lax",
+            path: "/",
+            maxAge: 86400,
+          });
+        }
+      } catch (e) {
+        console.error("Impossible de décoder l'ID Token pour extraire l'ID:", e);
+      }
     }
 
     // Supprimer les cookies PKCE temporaires
