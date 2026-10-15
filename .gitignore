@@ -34,9 +34,10 @@ yarn-error.log*
 .env.local
 .env.*.local
 
-# Seuls .env et .env.production doivent pouvoir être commités
-!.env
-!.env.production
+# Aucun fichier .env ne doit être commité (secrets) : voir .env.example
+.env
+.env.*
+!.env.example
 
 
 # vercel

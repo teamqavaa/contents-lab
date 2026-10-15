@@ -1,38 +1,65 @@
-// app/api/auth/callback/route.ts (Contents-Lab)
+// app/api/auth/callback/route.ts — retour du SSO : échange du code contre les tokens
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+
+import {
+  APP_URL,
+  PKCE_COOKIES,
+  SECURE_COOKIES,
+  SSO_API_URL,
+  SSO_CLIENT_ID,
+  SSO_CLIENT_SECRET,
+  SSO_REDIRECT_URI,
+  safeInternalPath,
+} from "@/lib/sso";
+
+function redirectWithError(error: string) {
+  return NextResponse.redirect(`${APP_URL}/?error=${encodeURIComponent(error)}`);
+}
+
+/** Lit le payload d'un JWT (sans vérification : le token vient directement du SSO en HTTPS). */
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  try {
+    return JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf-8"));
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
+  const state = searchParams.get("state");
   const errorParam = searchParams.get("error");
 
-  const APP_URL = "https://qi-front-app-l2tbnetuqa-ew.a.run.app";
-  const SSO_API_URL = "https://qavaa-innovate-sso-zlvwvifuvq-ew.a.run.app";
-  const CLIENT_ID = "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX";
-  const REDIRECT_URI = `${APP_URL}/api/auth/callback`;
-
   if (errorParam) {
-    return NextResponse.redirect(`${APP_URL}/login?error=${encodeURIComponent(errorParam)}`);
+    return redirectWithError(errorParam);
   }
-
   if (!code) {
-    return NextResponse.redirect(`${APP_URL}/login?error=missing_code`);
+    return redirectWithError("missing_code");
   }
 
   const cookieStore = await cookies();
-  const codeVerifier = cookieStore.get("sso_code_verifier")?.value;
+  const codeVerifier = cookieStore.get(PKCE_COOKIES.verifier)?.value;
+  const expectedState = cookieStore.get(PKCE_COOKIES.state)?.value;
+  const redirectAfter = safeInternalPath(cookieStore.get(PKCE_COOKIES.redirectAfter)?.value);
 
-  // Construction des paramètres de demande de token
-  const tokenParams = new URLSearchParams();
-  tokenParams.append("grant_type", "authorization_code");
-  tokenParams.append("client_id", CLIENT_ID);
-  tokenParams.append("code", code);
-  tokenParams.append("redirect_uri", REDIRECT_URI);
+  // Protection CSRF : le state doit être celui généré par /api/auth/login
+  if (!expectedState || state !== expectedState) {
+    return redirectWithError("invalid_state");
+  }
 
-  // Transmission impérative du PKCE si présent
+  const tokenParams = new URLSearchParams({
+    grant_type: "authorization_code",
+    client_id: SSO_CLIENT_ID,
+    code,
+    redirect_uri: SSO_REDIRECT_URI,
+  });
   if (codeVerifier) {
     tokenParams.append("code_verifier", codeVerifier);
+  }
+  if (SSO_CLIENT_SECRET) {
+    tokenParams.append("client_secret", SSO_CLIENT_SECRET);
   }
 
   try {
@@ -40,84 +67,50 @@ export async function GET(request: Request) {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        "Accept": "application/json",
+        Accept: "application/json",
       },
       body: tokenParams.toString(),
+      cache: "no-store",
     });
 
-    const rawText = await tokenRes.text();
-    let tokenData: any = {};
-    try {
-      tokenData = JSON.parse(rawText);
-    } catch {
-      console.error("🔴 Réponse non-JSON du serveur SSO:", rawText);
+    const tokenData = await tokenRes.json().catch(() => ({}));
+
+    if (!tokenRes.ok || !tokenData.access_token) {
+      const detail = tokenData.error_description || tokenData.error || tokenRes.statusText;
+      console.error("Échec de l'échange du code SSO :", tokenRes.status, tokenData);
+      return redirectWithError(`SSO_${tokenRes.status}_${detail}`);
     }
 
-    if (!tokenRes.ok) {
-      const detailError = tokenData.error_description || tokenData.error || tokenRes.statusText;
-      console.error("🔴 ÉCHEC ECHANGE TOKEN DJANGO :", tokenRes.status, tokenData);
-
-      return NextResponse.redirect(
-        `${APP_URL}/login?error=${encodeURIComponent(`SSO_${tokenRes.status}_${detailError}`)}`
-      );
-    }
-
-    // Sauvegarde des tokens de session sur Contents-Lab
-    cookieStore.set("access_token", tokenData.access_token, {
+    const cookieOptions = {
       httpOnly: true,
-      secure: true,
-      sameSite: "lax",
+      secure: SECURE_COOKIES,
+      sameSite: "lax" as const,
       path: "/",
-      maxAge: tokenData.expires_in || 86400,
-    });
+    };
+    const maxAge = tokenData.expires_in || 86400;
+
+    cookieStore.set("access_token", tokenData.access_token, { ...cookieOptions, maxAge });
 
     if (tokenData.refresh_token) {
-      cookieStore.set("refresh_token", tokenData.refresh_token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "lax",
-        path: "/",
-        maxAge: 30 * 86400,
-      });
+      cookieStore.set("refresh_token", tokenData.refresh_token, { ...cookieOptions, maxAge: 30 * 86400 });
     }
 
-    // 🟢 EXTRACTION ET STOCKAGE DE L'ID DU USER DEPUIS L'ID TOKEN OIDC
     if (tokenData.id_token) {
-      try {
-        const base64Url = tokenData.id_token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(
-          atob(base64)
-            .split('')
-            .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-            .join('')
-        );
-        const payload = JSON.parse(jsonPayload);
+      // Relu par logoutAction pour la déconnexion globale (id_token_hint)
+      cookieStore.set("id_token", tokenData.id_token, { ...cookieOptions, maxAge });
 
-        // Récupération de l'identifiant (sub ou user_id)
-        const userId = payload.sub || payload.user_id;
-
-        if (userId) {
-          cookieStore.set("user_id", userId, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "lax",
-            path: "/",
-            maxAge: 86400,
-          });
-        }
-      } catch (e) {
-        console.error("Impossible de décoder l'ID Token pour extraire l'ID:", e);
+      const userId = decodeJwtPayload(tokenData.id_token)?.sub;
+      if (typeof userId === "string") {
+        cookieStore.set("user_id", userId, { ...cookieOptions, maxAge });
       }
     }
 
-    // Supprimer les cookies PKCE temporaires
-    cookieStore.delete("sso_code_verifier");
-    cookieStore.delete("sso_state");
+    // Nettoyage des cookies temporaires du flux PKCE
+    Object.values(PKCE_COOKIES).forEach((name) => cookieStore.delete(name));
 
-    return NextResponse.redirect(`${APP_URL}/dashboard`);
-  } catch (err: any) {
-    console.error("🚨 Erreur réseau callback :", err);
-    return NextResponse.redirect(`${APP_URL}/login?error=server_error`);
+    return NextResponse.redirect(`${APP_URL}${redirectAfter}`);
+  } catch (err) {
+    console.error("Erreur réseau pendant le callback SSO :", err);
+    return redirectWithError("server_error");
   }
 }
