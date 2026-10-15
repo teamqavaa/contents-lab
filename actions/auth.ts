@@ -2,24 +2,24 @@
 
 import { cookies } from 'next/headers';
 
-import { APP_URL, SSO_API_URL } from '@/lib/sso';
+import { APP_URL, SSO_FRONT_URL } from '@/lib/sso';
 
+/**
+ * Déconnexion globale : purge des cookies locaux puis redirection vers le front SSO, qui vide
+ * sa propre session et demande au SSO de révoquer les tokens de TOUTES les applications.
+ */
 export async function logoutAction(idToken?: string) {
   const cookieStore = await cookies();
 
   // L'id_token est stocké en cookie httpOnly par le callback : on le relit avant la purge
   const idTokenHint = idToken || cookieStore.get('id_token')?.value;
 
-  // 1. Purge de tous les cookies locaux de l'application cliente
   for (const cookie of cookieStore.getAll()) {
     cookieStore.delete(cookie.name);
   }
 
-  // 2. Déconnexion globale sur le SSO (révocation de tous les tokens), puis retour à l'accueil
-  const targetRedirect = `${APP_URL}/`;
-  const logoutUrl = new URL(`${SSO_API_URL}/api/o/logout/`);
-  logoutUrl.searchParams.set('post_logout_redirect_uri', targetRedirect);
-
+  const logoutUrl = new URL('/api/auth/logout', SSO_FRONT_URL);
+  logoutUrl.searchParams.set('post_logout_redirect_uri', `${APP_URL}/`);
   if (idTokenHint) {
     logoutUrl.searchParams.set('id_token_hint', idTokenHint);
   }

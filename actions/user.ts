@@ -15,14 +15,15 @@ export interface ConnectedUser {
 }
 
 export async function getConnectedUser(): Promise<ConnectedUser | null> {
+  // Hors du try : Next.js lève ici une erreur interne pour rendre la page dynamique
+  const cookieStore = await cookies();
+  const accessToken = cookieStore.get('access_token')?.value;
+
+  if (!accessToken) {
+    return null;
+  }
+
   try {
-    const cookieStore = await cookies();
-    const accessToken = cookieStore.get('access_token')?.value;
-
-    if (!accessToken) {
-      return null;
-    }
-
     const response = await fetch(`${SSO_API_URL}/api/users/me/`, {
       method: 'GET',
       headers: {
