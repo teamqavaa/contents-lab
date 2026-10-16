@@ -426,7 +426,7 @@ export default function CoursePlayerClient({ course, enrollment }: CoursePlayerC
                 <button
                   onClick={() => markLessonCompleted(activeLesson.id)}
                   disabled={completedIds.has(activeLesson.id)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white disabled:bg-neutral-800 disabled:text-emerald-400 transition-colors text-xs font-semibold"
+                  className="btn btn-success btn-sm disabled:bg-neutral-800 disabled:text-emerald-400 disabled:opacity-100"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>{completedIds.has(activeLesson.id) ? 'Completed' : 'Mark as complete'}</span>
@@ -435,7 +435,7 @@ export default function CoursePlayerClient({ course, enrollment }: CoursePlayerC
               <button
                 onClick={handlePrevLesson}
                 disabled={currentIndex <= 0}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white disabled:opacity-30 disabled:hover:bg-neutral-800 disabled:hover:text-neutral-300 transition-colors text-xs font-semibold"
+                className="btn btn-sm bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white disabled:opacity-30 disabled:hover:bg-neutral-800 disabled:hover:text-neutral-300"
               >
                 <SkipBack className="w-3.5 h-3.5" />
                 <span>Previous</span>
@@ -444,7 +444,7 @@ export default function CoursePlayerClient({ course, enrollment }: CoursePlayerC
               <button
                 onClick={handleNextLesson}
                 disabled={currentIndex >= allLessons.length - 1}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white disabled:opacity-30 disabled:hover:bg-neutral-800 disabled:hover:text-neutral-300 transition-colors text-xs font-semibold"
+                className="btn btn-sm bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white disabled:opacity-30 disabled:hover:bg-neutral-800 disabled:hover:text-neutral-300"
               >
                 <span>Next</span>
                 <SkipForward className="w-3.5 h-3.5" />
@@ -499,7 +499,7 @@ export default function CoursePlayerClient({ course, enrollment }: CoursePlayerC
                         href={res.file || res.external_url || '#'}
                         target="_blank"
                         rel="noreferrer"
-                        className="p-2.5 rounded-xl bg-neutral-700 hover:bg-blue-600 text-neutral-300 hover:text-white transition-colors shrink-0"
+                        className="btn btn-icon bg-neutral-700 text-neutral-300 hover:bg-indigo-600 hover:text-white"
                       >
                         <Download className="w-4 h-4" />
                       </a>
@@ -524,7 +524,7 @@ export default function CoursePlayerClient({ course, enrollment }: CoursePlayerC
                 placeholder="Take your personal notes here..."
                 className="w-full h-32 bg-neutral-800/40 border border-neutral-800 rounded-2xl p-4 text-xs text-white focus:outline-none focus:border-blue-500 transition-colors"
               />
-              <button className="self-end px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-colors">
+              <button className="btn btn-primary btn-sm self-end">
                 Save Note
               </button>
             </div>

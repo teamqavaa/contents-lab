@@ -35,7 +35,7 @@ export default function NotFound() {
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             href="/api/auth/login?mode=login"
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            className="btn btn-primary"
           >
             <LogIn className="h-4 w-4" />
             Log In
@@ -43,7 +43,7 @@ export default function NotFound() {
 
           <Link
             href="/api/auth/login?mode=register"
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+            className="btn btn-secondary"
           >
             <UserPlus className="h-4 w-4" />
             Sign Up

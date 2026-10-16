@@ -108,7 +108,7 @@ export default function CourseCard({ course, initialInCart, progress }: CourseCa
             </div>
             <Link
               href={progress.href}
-              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-neutral-900 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#6d5deb]"
+              className="btn btn-dark btn-sm"
             >
               {progress.percentage >= 100 ? 'Watch again' : progress.completedLessons > 0 ? 'Continue' : 'Start course'}
             </Link>

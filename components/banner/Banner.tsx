@@ -55,13 +55,13 @@ export default async function Banner() {
           <div className="mt-9 flex flex-wrap gap-3">
             <Link
               href="/courses"
-              className="inline-flex items-center gap-2 rounded-full bg-neutral-900 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-neutral-900/20 transition-colors hover:bg-neutral-700"
+              className="btn btn-dark btn-lg shadow-lg shadow-neutral-900/20"
             >
               Start Learning <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
             <Link
               href="/career-tracks"
-              className="inline-flex items-center rounded-full border border-neutral-200 px-7 py-3.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50"
+              className="btn btn-secondary btn-lg"
             >
               Explore Career Tracks
             </Link>

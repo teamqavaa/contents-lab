@@ -70,7 +70,7 @@ export default function QavaaSuccessContent() {
 
         <Link
           href="/dashboard"
-          className="mt-4 px-6 py-3 bg-black text-white text-sm font-medium rounded-xl hover:bg-neutral-800 transition-colors"
+          className="btn btn-dark btn-lg mt-4"
         >
           Go to my courses
         </Link>

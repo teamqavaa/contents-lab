@@ -74,7 +74,7 @@ export default function CartSummary({ subtotal, totalPrice }: CartSummaryProps) 
           />
           <button
             type="button"
-            className="px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+            className="btn btn-dark"
           >
             Apply
           </button>
@@ -92,7 +92,7 @@ export default function CartSummary({ subtotal, totalPrice }: CartSummaryProps) 
         type="button"
         onClick={onCheckoutClick}
         disabled={isLoading}
-        className="w-full py-3.5 bg-black hover:bg-neutral-800 text-white font-semibold rounded-xl transition-colors shadow-sm cursor-pointer text-center disabled:opacity-50"
+        className="btn btn-dark btn-lg btn-block"
       >
         {isLoading ? "Processing..." : "Checkout"}
       </button>

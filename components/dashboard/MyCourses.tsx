@@ -53,8 +53,8 @@ export default async function MyCourses({ query, status }: { query: string; stat
                 key={filter.value || 'all'}
                 href={filterHref(filter.value)}
                 aria-current={active ? 'page' : undefined}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium ${
-                  active ? 'bg-[#6d5deb] text-white' : 'bg-white text-neutral-600 hover:text-neutral-900'
+                className={`btn btn-sm ${
+                  active ? 'btn-primary' : 'btn-light text-neutral-600 hover:text-neutral-900'
                 }`}
               >
                 {filter.label}

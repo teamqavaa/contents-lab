@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Loader2, ArrowRight, PlayCircle, X, LogIn } from 'lucide-react';
+import { Loader2, ArrowRight, PlayCircle, X, LogIn, ShoppingCart } from 'lucide-react';
 import { addToCartAction, getCoursePurchaseStatus } from '@/actions/cart';
 
 interface AddToCartButtonProps {
@@ -11,6 +11,9 @@ interface AddToCartButtonProps {
   initialInCart?: boolean;
   initialIsEnrolled?: boolean;
   currentModuleSlug?: string;
+  /** 'lg' + block : bouton principal pleine largeur (page détail d'un cours) */
+  size?: 'sm' | 'lg';
+  block?: boolean;
 }
 
 const SSO_LOGIN_URL = '/api/auth/login?mode=login';
@@ -20,8 +23,12 @@ export default function AddToCartButton({
   courseSlug,
   initialInCart = false,
   initialIsEnrolled = false,
-  currentModuleSlug
+  currentModuleSlug,
+  size = 'sm',
+  block = false,
 }: AddToCartButtonProps) {
+  const shape = `btn ${size === 'lg' ? 'btn-lg' : 'btn-sm'} ${block ? 'btn-block' : ''}`;
+  const icon = size === 'lg' ? 'w-4 h-4' : 'w-3.5 h-3.5';
   const [isAdding, setIsAdding] = useState(false);
   const [isAdded, setIsAdded] = useState(initialInCart);
   const [isEnrolled, setIsEnrolled] = useState(initialIsEnrolled);
@@ -91,8 +98,8 @@ export default function AddToCartButton({
 
   if (!isMounted || isLoading) {
     return (
-      <div className="px-4 py-2 bg-neutral-100 text-neutral-400 text-xs font-bold rounded-lg flex items-center gap-1.5 animate-pulse">
-        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+      <div className={`${shape} cursor-default bg-neutral-100 text-neutral-400 animate-pulse`}>
+        <Loader2 className={`${icon} animate-spin`} />
         <span>Loading...</span>
       </div>
     );
@@ -103,33 +110,36 @@ export default function AddToCartButton({
       {isEnrolled ? (
         <Link
           href={courseLearnLink}
-          className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-1.5 shadow-2xs"
+          className={`${shape} btn-primary`}
         >
-          <span>View Course</span>
-          <PlayCircle className="w-3.5 h-3.5" />
+          <PlayCircle className={icon} />
+          <span>Go to course</span>
         </Link>
       ) : isAdded ? (
         <Link
           href="/carts"
-          className="px-4 py-2 bg-emerald-500 text-white text-xs font-bold rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-1.5 shadow-2xs"
+          className={`${shape} btn-success`}
         >
-          <span>View Cart</span>
-          <ArrowRight className="w-3.5 h-3.5" />
+          <span>View cart</span>
+          <ArrowRight className={icon} />
         </Link>
       ) : (
         <button
           type="button"
           disabled={isAdding}
           onClick={handleAddToCart}
-          className="px-4 py-2 bg-blue-400 text-white text-xs font-bold rounded-lg hover:bg-blue-500 transition-all flex items-center gap-1.5 shadow-2xs cursor-pointer disabled:cursor-not-allowed"
+          className={`${shape} btn-primary`}
         >
           {isAdding ? (
             <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className={`${icon} animate-spin`} />
               <span>Adding...</span>
             </>
           ) : (
-            <span>Add To Cart</span>
+            <>
+              <ShoppingCart className={icon} />
+              <span>Add to cart</span>
+            </>
           )}
         </button>
       )}
@@ -140,7 +150,7 @@ export default function AddToCartButton({
             <button
               type="button"
               onClick={() => setShowAuthModal(false)}
-              className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors cursor-pointer"
+              className="btn btn-ghost btn-icon btn-sm absolute top-3 right-3 text-neutral-400"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -161,20 +171,16 @@ export default function AddToCartButton({
             <div className="flex flex-col gap-2.5 pt-2">
               <a
                 href={SSO_LOGIN_URL}
-                className="group flex items-center justify-between bg-blue-400 text-white pl-5 pr-1 py-1 rounded-full font-bold text-xs tracking-wider transition-all hover:bg-neutral-800 shadow-xs"
+                className="btn btn-primary btn-block"
               >
-                <span>SIGN IN</span>
-                <div className="flex items-center justify-center w-8 h-8 bg-white rounded-full text-black transition-transform group-hover:translate-x-0.5">
-                  <svg className="w-4 h-4 stroke-current stroke-[2]" fill="none" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                  </svg>
-                </div>
+                <LogIn className="w-4 h-4" />
+                <span>Sign in</span>
               </a>
 
               <button
                 type="button"
                 onClick={() => setShowAuthModal(false)}
-                className="w-full py-2.5 px-4 bg-neutral-100 text-neutral-700 text-xs font-bold rounded-2xl hover:bg-neutral-200 transition-colors cursor-pointer"
+                className="btn btn-secondary btn-block"
               >
                 Cancel
               </button>

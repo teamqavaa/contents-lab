@@ -19,7 +19,7 @@ interface CourseActionsProps {
 }
 
 const button =
-  'inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50';
+  'btn btn-secondary btn-sm';
 
 /**
  * Actions sur un cours : modifier, changer de statut, supprimer.

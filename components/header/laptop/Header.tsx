@@ -25,7 +25,7 @@ export default function Header() {
       <div className="mx-auto flex h-[76px] w-[94%] max-w-7xl items-center justify-between gap-4">
         <IgniteLogo />
 
-        <nav aria-label="Main" className="flex items-center gap-1 rounded-full border border-neutral-100 bg-neutral-50 p-1">
+        <nav aria-label="Main" className="flex items-center gap-1 rounded-[6px] border border-neutral-100 bg-neutral-50 p-1">
           {SITE_LINKS.map((link) => {
             const active = isSiteLinkActive(pathname, link.href);
             return (
@@ -33,7 +33,7 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 aria-current={active ? "page" : undefined}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition-colors ${
+                className={`btn btn-sm font-medium ${
                   active ? "bg-white font-semibold text-neutral-900 shadow-sm" : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
@@ -46,7 +46,7 @@ export default function Header() {
         <div className="flex min-w-[220px] items-center justify-end gap-2.5">
           <SearchTrigger />
           {loading ? (
-            <span className="h-10 w-40 animate-pulse rounded-full bg-neutral-100" aria-hidden="true" />
+            <span className="h-10 w-40 animate-pulse rounded-[var(--radius-btn)] bg-neutral-100" aria-hidden="true" />
           ) : authenticated && user ? (
             <>
               <CartButton />
@@ -56,13 +56,13 @@ export default function Header() {
             <>
               <a
                 href={LOGIN_URL}
-                className="rounded-full border border-neutral-200 px-5 py-2.5 text-sm font-medium text-neutral-900 hover:bg-neutral-50"
+                className="btn btn-secondary"
               >
                 Log In
               </a>
               <a
                 href={REGISTER_URL}
-                className="rounded-full bg-neutral-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700"
+                className="btn btn-dark"
               >
                 Sign Up
               </a>

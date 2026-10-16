@@ -158,7 +158,7 @@ export default async function LearningPathPage({ params }: Params) {
                   {enrollment ? (
                     <Link
                       href={resumeHref(enrollment)}
-                      className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3.5 font-semibold text-white hover:bg-indigo-500"
+                      className="btn btn-primary btn-lg"
                     >
                       <PlayCircle className="h-5 w-5" aria-hidden="true" />
                       {enrollment.completed_lessons > 0 ? 'Continue the path' : 'Start the path'}

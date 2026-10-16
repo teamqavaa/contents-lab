@@ -20,8 +20,8 @@ export default function MobileNav({ canManage = false }: { canManage?: boolean }
             key={href}
             href={href}
             aria-current={active ? 'page' : undefined}
-            className={`flex items-center gap-2 whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium ${
-              active ? 'bg-[#6d5deb] text-white' : 'bg-white text-neutral-700 border border-neutral-200'
+            className={`btn btn-sm ${
+              active ? 'btn-primary' : 'btn-secondary'
             }`}
           >
             <Icon className="w-4 h-4" />

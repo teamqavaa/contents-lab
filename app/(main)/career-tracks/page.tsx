@@ -1,7 +1,7 @@
 // app/(main)/career-tracks/page.tsx — parcours métier : chaque cours publié sert de « career track »
 import type { Metadata } from 'next';
 
-import { getPublishedCourses } from '@/actions/catalog';
+import { getPublishedCourses, searchCourses } from '@/actions/catalog';
 import CareerTracksExplorer from '@/components/career-tracks/CareerTracksExplorer';
 import type { TrackSummary } from '@/components/career-tracks/types';
 import { courseTotals } from '@/lib/curriculum';
@@ -12,8 +12,15 @@ export const metadata: Metadata = {
   title: 'Career tracks · Ignite',
 };
 
-export default async function CareerTracksPage() {
-  const courses = await getPublishedCourses();
+type Props = { searchParams: Promise<{ q?: string }> };
+
+export default async function CareerTracksPage({ searchParams }: Props) {
+  // ?q= : recherche du header (ou lien partagé), résolue par l'API de recherche de courses-api
+  const query = ((await searchParams).q ?? '').trim();
+  const [courses, search] = await Promise.all([
+    getPublishedCourses(),
+    query.length >= 2 ? searchCourses(query, 50) : Promise.resolve(null),
+  ]);
   const tracks: TrackSummary[] = courses.map((course) => {
     const totals = courseTotals(course);
     return {
@@ -42,7 +49,13 @@ export default async function CareerTracksPage() {
             Every track is a complete course split into ordered modules. Open its learning path to see each step.
           </p>
         </header>
-        <CareerTracksExplorer tracks={tracks} />
+        {/* key : une nouvelle recherche depuis le header réinitialise les filtres */}
+        <CareerTracksExplorer
+          key={query}
+          tracks={tracks}
+          initialQuery={query}
+          initialMatches={search ? search.results.map((result) => result.id) : null}
+        />
       </div>
     </main>
   );

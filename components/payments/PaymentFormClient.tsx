@@ -73,7 +73,7 @@ export default function PaymentFormClient({ orderId, initialProviders, fetchErro
       <button
         type="submit"
         disabled={loading || initialProviders.length === 0}
-        className="w-full py-3 px-4 bg-blue-400 hover:bg-blue-500 text-white font-medium rounded-md transition-colors disabled:opacity-50 cursor-pointer"
+        className="btn btn-primary btn-lg btn-block"
       >
         {loading ? "Redirecting to payment..." : "Pay Now"}
       </button>

@@ -34,7 +34,7 @@ export default function CartButton({ initialCount = 0, className = '' }: CartBut
     <Link
       href="/carts"
       aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
-      className={`relative flex items-center justify-center w-10 h-10 rounded-full border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50 transition-colors ${className}`}
+      className={`btn btn-secondary btn-icon relative ${className}`}
     >
       <ShoppingCart className="w-[18px] h-[18px]" aria-hidden="true" />
       {cartCount > 0 && (

@@ -130,3 +130,54 @@
 }
 
 
+
+/*
+ * Boutons du site : une seule forme (rayon --radius-btn, 4px) pour tous les boutons et
+ * liens-boutons. Utilisation : className="btn btn-primary" (+ btn-sm / btn-lg / btn-icon).
+ * Ne pas ajouter de classe rounded-* sur un bouton : le rayon vient d'ici.
+ */
+:root {
+  --radius-btn: 4px;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex h-10 shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-btn)] border border-transparent px-4 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-sm {
+    @apply h-8 gap-1.5 px-3 text-xs;
+  }
+  .btn-lg {
+    @apply h-12 px-6 text-base;
+  }
+  .btn-icon {
+    @apply w-10 px-0;
+  }
+  .btn-icon.btn-sm {
+    @apply w-8;
+  }
+  .btn-block {
+    @apply w-full;
+  }
+  .btn-primary {
+    @apply bg-indigo-600 text-white hover:bg-indigo-700;
+  }
+  .btn-dark {
+    @apply bg-neutral-900 text-white hover:bg-neutral-800;
+  }
+  .btn-secondary {
+    @apply border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-50;
+  }
+  .btn-ghost {
+    @apply text-neutral-700 hover:bg-neutral-100;
+  }
+  .btn-light {
+    @apply bg-white text-neutral-900 hover:bg-neutral-100;
+  }
+  .btn-danger {
+    @apply border-red-200 bg-white text-red-600 hover:bg-red-50;
+  }
+  .btn-success {
+    @apply bg-emerald-600 text-white hover:bg-emerald-700;
+  }
+}

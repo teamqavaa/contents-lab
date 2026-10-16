@@ -206,7 +206,7 @@ export default function LearningHome({ user, enrollments, stats, catalog }: Lear
                         </dl>
                         <Link
                           href={resumeHref(enrollment)}
-                          className="rounded-xl border border-neutral-200 px-5 py-2.5 text-center text-sm font-semibold text-neutral-900 shadow-sm hover:bg-neutral-50"
+                          className="btn btn-secondary"
                         >
                           {started ? 'Continue' : 'Start'}
                         </Link>

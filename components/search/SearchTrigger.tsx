@@ -1,35 +1,39 @@
-// components/search/SearchTrigger.tsx
+// components/search/SearchTrigger.tsx — bouton loupe du header (raccourci ⌘K / Ctrl+K)
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
+
 import SearchModal from './SearchModal';
 
 export default function SearchTrigger() {
   const [isOpen, setIsOpen] = useState(false);
+  const close = useCallback(() => setIsOpen(false), []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <>
-      {/* Bouton Icône Loupe */}
       <button
+        type="button"
         onClick={() => setIsOpen(true)}
-        aria-label="Ouvrir la recherche"
-        className="flex items-center justify-center w-9 h-9 rounded-full bg-neutral-100 dark:bg-neutral-800 hover:bg-neutral-200 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200 transition-colors"
+        aria-label="Search courses"
+        title="Search (⌘K)"
+        className="btn btn-secondary btn-icon"
       >
-        <svg
-          className="w-4 h-4 stroke-current stroke-[2]"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-          />
-        </svg>
+        <Search className="h-4 w-4" />
       </button>
 
-      {/* Le Modal Popup */}
-      <SearchModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <SearchModal isOpen={isOpen} onClose={close} />
     </>
   );
 }

@@ -77,7 +77,7 @@ export default function UserMenu({ user }: { user: SessionUser }) {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2.5 rounded-full border border-neutral-200 bg-white py-1 pl-1 pr-3 hover:bg-neutral-50 transition-colors"
+        className="btn btn-secondary gap-2.5 pl-1 pr-3"
       >
         <OnlineAvatar user={user} size={32} />
         <span className="max-w-[120px] truncate text-sm font-semibold text-neutral-900">
@@ -106,7 +106,7 @@ export default function UserMenu({ user }: { user: SessionUser }) {
                   href={link.href}
                   role="menuitem"
                   onClick={() => setOpen(false)}
-                  className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+                  className="flex items-center gap-2.5 rounded-[var(--radius-btn)] px-2.5 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
                 >
                   <Icon className="w-4 h-4 text-neutral-500" aria-hidden="true" />
                   {link.label}
@@ -123,7 +123,7 @@ export default function UserMenu({ user }: { user: SessionUser }) {
               setSigningOut(true);
               signOut();
             }}
-            className="flex w-full items-center gap-2.5 rounded-lg border-t border-neutral-100 px-2.5 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
+            className="flex w-full items-center gap-2.5 rounded-[var(--radius-btn)] border-t border-neutral-100 px-2.5 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
           >
             {signingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <LogOut className="w-4 h-4" />}
             {signingOut ? 'Signing out…' : 'Sign out'}

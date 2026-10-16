@@ -32,7 +32,7 @@ export default function LogoutButton({ className = '' }: { className?: string })
       type="button"
       onClick={handleLogout}
       disabled={pending}
-      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium text-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-60 ${className}`}
+      className={`flex items-center gap-3 rounded-[var(--radius-btn)] px-3 py-2.5 text-[15px] font-medium text-orange-500 hover:bg-orange-50 transition-colors disabled:opacity-60 ${className}`}
     >
       {pending ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogOut className="w-5 h-5" />}
       {pending ? 'Signing out…' : 'Logout'}

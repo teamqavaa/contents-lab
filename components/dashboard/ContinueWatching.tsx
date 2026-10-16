@@ -27,7 +27,7 @@ export default function ContinueWatching({ enrollments }: { enrollments: Enrollm
               type="button"
               onClick={() => scroll(-1)}
               aria-label="Previous courses"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-neutral-500 hover:text-neutral-900"
+              className="btn btn-light btn-icon btn-sm text-neutral-500 hover:text-neutral-900"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -35,7 +35,7 @@ export default function ContinueWatching({ enrollments }: { enrollments: Enrollm
               type="button"
               onClick={() => scroll(1)}
               aria-label="Next courses"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#6d5deb] text-white hover:bg-[#5a4ad6]"
+              className="btn btn-primary btn-icon btn-sm"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

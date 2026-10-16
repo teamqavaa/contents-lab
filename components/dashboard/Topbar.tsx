@@ -34,7 +34,7 @@ export default function Topbar({ name, email, avatarUrl, canManage = false }: To
         <button
           type="button"
           aria-label="Notifications"
-          className="hidden sm:flex w-11 h-11 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+          className="btn btn-secondary btn-icon hidden sm:inline-flex"
         >
           <Bell className="w-4 h-4" />
         </button>

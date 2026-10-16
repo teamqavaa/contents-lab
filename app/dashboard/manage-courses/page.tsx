@@ -50,7 +50,7 @@ export default async function ManageCoursesPage({
         </div>
         <Link
           href="/dashboard/manage-courses/new"
-          className="inline-flex items-center justify-center gap-2 rounded-full bg-[#6d5deb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5b4bd9]"
+          className="btn btn-primary"
         >
           <Plus className="w-4 h-4" /> Add course
         </Link>
@@ -63,8 +63,8 @@ export default async function ManageCoursesPage({
               key={filter.value}
               href={filterHref(filter.value)}
               aria-current={status === filter.value ? 'page' : undefined}
-              className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium ${
-                status === filter.value ? 'bg-[#6d5deb] text-white' : 'bg-white text-neutral-700 border border-neutral-200'
+              className={`btn btn-sm ${
+                status === filter.value ? 'btn-primary' : 'btn-secondary'
               }`}
             >
               {filter.label}

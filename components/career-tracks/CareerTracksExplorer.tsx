@@ -1,14 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
-import { Info, Layers, Route, Search, TrendingUp } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Info, Layers, Loader2, Route, Search, TrendingUp } from 'lucide-react';
+
+import { searchCourses } from '@/actions/catalog';
 
 import { capitalize, formatMinutes, plural } from '@/lib/format';
 import { TRACK_TYPES } from '@/lib/curriculum';
 import type { TrackSummary } from './types';
 
 const LEVEL_ORDER = ['beginner', 'intermediate', 'advanced', 'all'];
+const SEARCH_LIMIT = 50;
+const DEBOUNCE_MS = 250;
 
 function toggle(list: string[], value: string) {
   return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
@@ -26,9 +30,24 @@ function Checkbox({ label, hint, checked, onChange }: { label: string; hint?: st
   );
 }
 
-/** Filtres (recherche, type de parcours, difficulté, catégories) + grille des parcours. */
-export default function CareerTracksExplorer({ tracks }: { tracks: TrackSummary[] }) {
-  const [query, setQuery] = useState('');
+/**
+ * Filtres (recherche, type de parcours, difficulté, catégories) + grille des parcours.
+ * La recherche passe par l'API (GET /api/courses/search/) : elle couvre aussi le formateur,
+ * les tags, les modules et les leçons. `initialMatches` = résultats déjà calculés pour ?q=.
+ */
+export default function CareerTracksExplorer({
+  tracks,
+  initialQuery = '',
+  initialMatches = null,
+}: {
+  tracks: TrackSummary[];
+  initialQuery?: string;
+  initialMatches?: string[] | null;
+}) {
+  const [query, setQuery] = useState(initialQuery);
+  const [matches, setMatches] = useState<Set<string> | null>(initialMatches ? new Set(initialMatches) : null);
+  const [searching, setSearching] = useState(false);
+  const lastSearched = useRef(initialMatches ? initialQuery.trim() : '');
   const [types, setTypes] = useState<string[]>([]);
   const [levels, setLevels] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -43,18 +62,48 @@ export default function CareerTracksExplorer({ tracks }: { tracks: TrackSummary[
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }, [tracks]);
 
+  useEffect(() => {
+    const q = query.trim();
+    // URL partageable, sans recharger la page
+    window.history.replaceState(null, '', q ? `/career-tracks?q=${encodeURIComponent(q)}` : '/career-tracks');
+    if (q.length < 2 || q === lastSearched.current) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const response = await searchCourses(q, SEARCH_LIMIT);
+      if (cancelled) return;
+      lastSearched.current = q;
+      setMatches(new Set(response.results.map((result) => result.id)));
+      setSearching(false);
+    }, DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  const onQueryChange = (value: string) => {
+    setQuery(value);
+    const q = value.trim();
+    if (q.length < 2) {
+      lastSearched.current = '';
+      setMatches(null);
+      setSearching(false);
+    } else {
+      setSearching(q !== lastSearched.current);
+    }
+  };
+
   const filtered = tracks.filter((track) => {
-    const text = `${track.title} ${track.description} ${track.category}`.toLowerCase();
-    if (query && !text.includes(query.toLowerCase())) return false;
+    if (matches && !matches.has(track.id)) return false;
     if (types.length && !TRACK_TYPES.some((type) => types.includes(type.value) && type.match(track.minutes))) return false;
     if (levels.length && !levels.includes(track.level)) return false;
     if (categories.length && !categories.includes(track.category)) return false;
     return true;
   });
 
-  const hasFilters = Boolean(query || types.length || levels.length || categories.length);
+  const hasFilters = Boolean(matches || types.length || levels.length || categories.length);
   const reset = () => {
-    setQuery('');
+    onQueryChange('');
     setTypes([]);
     setLevels([]);
     setCategories([]);
@@ -64,12 +113,16 @@ export default function CareerTracksExplorer({ tracks }: { tracks: TrackSummary[
     <div className="grid gap-10 lg:grid-cols-[300px_1fr]">
       <aside className="flex flex-col gap-7" aria-label="Filters">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" aria-hidden="true" />
+          {searching ? (
+            <Loader2 className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-neutral-400" aria-hidden="true" />
+          ) : (
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" aria-hidden="true" />
+          )}
           <input
             type="search"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search"
+            onChange={(event) => onQueryChange(event.target.value)}
+            placeholder="Search courses, topics, instructors"
             aria-label="Search career tracks"
             className="w-full rounded-xl border border-neutral-200 bg-white py-3 pl-11 pr-4 text-sm focus:border-neutral-400 focus:outline-none"
           />
@@ -132,6 +185,7 @@ export default function CareerTracksExplorer({ tracks }: { tracks: TrackSummary[
       <section aria-labelledby="tracks-title">
         <h2 id="tracks-title" className="mb-5 text-2xl font-bold text-neutral-900">
           {hasFilters ? `${filtered.length} track${filtered.length === 1 ? '' : 's'} found` : 'All tracks'}
+          {matches && <span className="ml-2 text-base font-normal text-neutral-500">for “{query.trim()}”</span>}
         </h2>
 
         {filtered.length === 0 ? (
@@ -166,7 +220,7 @@ export default function CareerTracksExplorer({ tracks }: { tracks: TrackSummary[
                     </span>
                     <Link
                       href={`/career-tracks/${track.slug}`}
-                      className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-neutral-200 px-3.5 py-2 text-sm font-semibold text-neutral-900 hover:bg-neutral-50"
+                      className="btn btn-secondary btn-sm"
                     >
                       <Route className="h-4 w-4" aria-hidden="true" /> Learning path
                     </Link>

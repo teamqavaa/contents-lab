@@ -107,7 +107,7 @@ export async function getEditableCourse(slug: string): Promise<CatalogCourse | n
 
 const COURSE_FIELDS = [
   'title', 'subtitle', 'description', 'category', 'level', 'language', 'price', 'discount_price',
-  'promo_video_url', 'status',
+  'promo_video_url', 'status', 'prerequisites', 'target_audience',
 ] as const;
 
 /**

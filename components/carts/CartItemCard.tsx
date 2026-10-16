@@ -95,7 +95,7 @@ export default function CartItemCard({ item, onRemove }: CartItemCardProps) {
           type="button"
           onClick={handleRemoveClick}
           disabled={isRemoving}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-50"
+          className="btn btn-ghost btn-icon btn-sm text-neutral-400 hover:bg-red-50 hover:text-red-500"
           aria-label="Remove item"
         >
           <svg className="w-5 h-5 stroke-current stroke-[2]" fill="none" viewBox="0 0 24 24">

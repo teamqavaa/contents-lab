@@ -58,6 +58,15 @@ export default function CourseForm({ course, categories, isAdmin }: CourseFormPr
         <textarea id="description" name="description" required rows={5} defaultValue={course?.description} className={inputClass} />
       </Field>
 
+      <div className="grid gap-5 md:grid-cols-2">
+        <Field label="Prerequisites" name="prerequisites" error={errors.prerequisites} hint="Shown on the course page">
+          <textarea id="prerequisites" name="prerequisites" rows={3} defaultValue={course?.prerequisites} placeholder="Basics of HTML and CSS" className={inputClass} />
+        </Field>
+        <Field label="Who is this course for?" name="target_audience" error={errors.target_audience} hint="Shown on the course page">
+          <textarea id="target_audience" name="target_audience" rows={3} defaultValue={course?.target_audience} placeholder="Motivated beginners who want to…" className={inputClass} />
+        </Field>
+      </div>
+
       <div className="grid gap-5 md:grid-cols-3">
         <Field label="Category *" name="category" error={errors.category}>
           <select id="category" name="category" required defaultValue={course?.category_details?.id ?? ''} className={inputClass}>
@@ -105,7 +114,7 @@ export default function CourseForm({ course, categories, isAdmin }: CourseFormPr
           <input id="thumbnail" name="thumbnail" type="url" defaultValue={course?.thumbnail ?? ''} placeholder="https://…" className={inputClass} />
         </Field>
         <Field label="Upload a thumbnail" name="thumbnail_file">
-          <input id="thumbnail_file" name="thumbnail_file" type="file" accept="image/*" className={`${inputClass} file:mr-3 file:rounded-lg file:border-0 file:bg-[#ece9fd] file:px-3 file:py-1 file:text-[#4f3fd6]`} />
+          <input id="thumbnail_file" name="thumbnail_file" type="file" accept="image/*" className={`${inputClass} file:mr-3 file:rounded-[var(--radius-btn)] file:border-0 file:bg-[#ece9fd] file:px-3 file:py-1 file:text-[#4f3fd6]`} />
         </Field>
       </div>
 
@@ -117,7 +126,7 @@ export default function CourseForm({ course, categories, isAdmin }: CourseFormPr
         <button
           type="submit"
           disabled={pending}
-          className="inline-flex items-center gap-2 rounded-full bg-[#6d5deb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5b4bd9] disabled:opacity-60"
+          className="btn btn-primary"
         >
           {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {course ? 'Save changes' : 'Create course'}

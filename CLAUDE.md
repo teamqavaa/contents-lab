@@ -34,6 +34,8 @@ npm run build                         # vérifie les types (à lancer avant chaq
 | `/` connecté | utilisateur connecté | `app/(main)/page.tsx` → `components/learning/LearningHome.tsx` |
 | `/career-tracks` | tout le monde | `app/(main)/career-tracks/page.tsx`, `components/career-tracks/` |
 | `/career-tracks/<slug>` | tout le monde | `app/(main)/career-tracks/[slug]/page.tsx` (learning path) |
+| `/courses/<slug>` | tout le monde | `app/(main)/courses/[slug]/page.tsx`, `components/courses/details/` |
+| Recherche du header | tout le monde | `components/search/SearchModal.tsx` → `/career-tracks?q=` |
 | `/dashboard…` | connecté | `app/dashboard/`, `components/dashboard/` |
 | `/dashboard/manage-courses…` | instructeur, admin | `app/dashboard/manage-courses/`, `components/dashboard/manage/`, `actions/manageCourses.ts` |
 
@@ -46,6 +48,52 @@ Règles à retenir :
 - Un nouvel appel d'API authentifié lit le cookie httpOnly `access_token` côté serveur
   (voir `apiCall` dans `actions/manageCourses.ts` ou `getJson` dans `actions/dashboard.ts`).
 - Textes de l'interface en anglais, commentaires en français.
+- **Boutons** : toujours `className="btn btn-<variante>"` (voir ci-dessous), jamais de `rounded-*`
+  sur un bouton.
+
+## Boutons (`app/globals.css`)
+
+Un seul rayon pour tout le site : `--radius-btn` (4 px). Classes à combiner :
+
+| Classe | Rôle |
+|---|---|
+| `btn` | base obligatoire (hauteur 40 px, gras, focus visible, état `disabled`) |
+| `btn-primary` / `btn-dark` / `btn-secondary` / `btn-light` / `btn-ghost` / `btn-danger` / `btn-success` | variantes (indigo, noir, bordure blanche, blanc, transparent, suppression, panier ajouté) |
+| `btn-sm` (32 px) / `btn-lg` (48 px) | tailles |
+| `btn-icon` | bouton carré contenant seulement une icône (+ `aria-label`) |
+| `btn-block` | pleine largeur |
+
+Exemple : `<Link href="/carts" className="btn btn-primary btn-lg btn-block">`. Le composant shadcn
+`components/ui/button.tsx` utilise le même rayon. Les onglets de navigation et éléments de menu
+reprennent `rounded-[var(--radius-btn)]`.
+
+## Recherche
+
+- API : `GET /api/courses/search/?q=` de courses-api (cours publiés ; titre, description, formateur,
+  catégorie, tags, modules, leçons), action `searchCourses()` dans `actions/catalog.ts`.
+- Header : loupe ou **⌘K / Ctrl+K** → `SearchModal` (suggestions en direct, flèches + Entrée).
+  Entrée ou *See all results* ouvre **`/career-tracks?q=<recherche>`** ; une suggestion ouvre son
+  learning path.
+- `/career-tracks` : le champ de recherche interroge la même API (250 ms après la frappe) et met
+  l'URL à jour (`?q=`), partageable.
+
+## Page d'un cours (`/courses/<slug>`)
+
+Maquette « catalogue » : bandeau sombre (fil d'Ariane, niveau, *Career track · N modules*, titre,
+note, apprenants, formateur, date de mise à jour, langue), vidéo de présentation, onglets, carte d'achat.
+
+| Élément | Donnée (courses-api `GET /api/courses/<slug>/`) |
+|---|---|
+| Vidéo de présentation | `promo_video_url` → `lib/video.ts` (`toVideoSource`) : YouTube/Vimeo convertis en URL **embed**, fichiers en `<video>`. **Lecture automatique en muet** (les navigateurs bloquent l'autoplay avec le son). L'ancienne page mettait l'URL `watch?v=` dans un iframe, ce que YouTube refuse : la vidéo ne s'affichait jamais. |
+| Carte d'achat | `price` / `discount_price` (prix barré + %), `AddToCartButton size="lg" block` (*Go to course* si inscrit), contenu inclus calculé depuis les modules/leçons publiés et `resources`, lien vers le learning path |
+| Aperçu | `learning_points` + `outcomes` (*What you'll learn*), `description`, `highlights`, `prerequisites`, `target_audience` |
+| Programme | modules et leçons publiés, durées, badge *Preview* |
+| Formateur | `instructor_name`, ses autres cours publiés et leur total d'apprenants (même `user_id`) |
+| Avis | `average_rating`, `total_reviews` (pas encore d'API d'avis détaillés) |
+| FAQ | questions générées **à partir des données du cours** (durée, niveau, langue, aperçus, ressources) |
+
+`actions/courseDetail.ts` ne contient plus aucune valeur inventée : un champ vide est masqué.
+Un brouillon reste visible par son auteur et les admins, avec un badge *Draft · only visible to you*.
 
 ## Header du site (`components/header/`)
 
@@ -82,7 +130,7 @@ Règles à retenir :
 ## Career tracks
 
 Chaque **cours publié** sert de parcours métier (pas de modèle dédié).
-- `/career-tracks` : filtres recherche, *Course type* (durée totale : < 3 h, 3-10 h, 10 h+, voir
+- `/career-tracks` : filtres recherche (API, voir *Recherche*), *Course type* (durée totale : < 3 h, 3-10 h, 10 h+, voir
   `TRACK_TYPES` dans `lib/curriculum.ts`), difficulté, catégories ; cartes **sans prix**, avec la
   catégorie et un bouton *Learning path*.
 - `/career-tracks/<slug>` : modules publiés dans l'ordre (étapes reliées), leçons dépliables, coches
@@ -102,6 +150,8 @@ ouvre l'URL est redirigé vers `/dashboard`.
 | Programme (modules, leçons, vidéo) | ses cours | tous |
 
 Statuts : `draft` (brouillon) → `review` (en attente de validation) → `published` (visible au catalogue).
+Le formulaire du cours contient aussi *Prerequisites* et *Who is this course for?* (affichés sur la
+page du cours).
 Écrans : liste (`page.tsx`), création (`new/page.tsx`, redirige vers l'éditeur), éditeur
 (`[slug]/page.tsx` = `CourseForm` + `CurriculumEditor`). Un cours déjà commandé ne peut pas être
 supprimé (409) : le passer en brouillon.

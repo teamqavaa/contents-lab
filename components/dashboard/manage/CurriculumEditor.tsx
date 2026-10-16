@@ -15,10 +15,8 @@ import {
 import { formatMinutes, plural } from '@/lib/format';
 import { inputClass } from './CourseForm';
 
-const smallButton =
-  'inline-flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:bg-neutral-50 disabled:opacity-50';
-const primaryButton =
-  'inline-flex items-center gap-1.5 rounded-lg bg-[#6d5deb] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#5b4bd9] disabled:opacity-60';
+const smallButton = 'btn btn-secondary btn-sm';
+const primaryButton = 'btn btn-primary btn-sm';
 
 type Editing =
   | { kind: 'module'; id?: string }

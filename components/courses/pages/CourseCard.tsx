@@ -58,7 +58,7 @@ export default function CourseCard({ course, onToggleFavorite }: CourseCardProps
               e.stopPropagation();
               onToggleFavorite(course.id);
             }}
-            className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-neutral-700 hover:bg-white hover:text-red-500 transition-colors shadow-xs cursor-pointer"
+            className="btn btn-light btn-icon btn-sm absolute top-3 right-3 z-10 bg-white/80 backdrop-blur-md hover:text-red-500 shadow-xs"
             aria-label="Favorite"
           >
             <svg
@@ -118,7 +118,7 @@ export default function CourseCard({ course, onToggleFavorite }: CourseCardProps
 
         <Link
           href={coursePath}
-          className="mt-3 px-3.5 py-1.5 border border-neutral-200 text-neutral-800 text-xs font-semibold rounded-lg hover:bg-neutral-50 transition-colors"
+          className="btn btn-secondary btn-sm mt-3"
         >
           Details
         </Link>

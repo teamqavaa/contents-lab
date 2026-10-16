@@ -134,7 +134,7 @@ export default function MostPopularCard() {
           <button
             type="button"
             onClick={handlePrev}
-            className="absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white border border-neutral-200 shadow-md flex items-center justify-center text-neutral-800 hover:bg-neutral-50 transition-all opacity-80 group-hover:opacity-100 cursor-pointer"
+            className="btn btn-secondary btn-icon absolute -left-3 sm:-left-5 top-1/2 -translate-y-1/2 z-20 shadow-md opacity-80 group-hover:opacity-100"
             aria-label="Previous"
           >
             <svg className="w-5 h-5 stroke-current stroke-[2]" fill="none" viewBox="0 0 24 24">
@@ -145,7 +145,7 @@ export default function MostPopularCard() {
           <button
             type="button"
             onClick={handleNext}
-            className="absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-white border border-neutral-200 shadow-md flex items-center justify-center text-neutral-800 hover:bg-neutral-50 transition-all opacity-80 group-hover:opacity-100 cursor-pointer"
+            className="btn btn-secondary btn-icon absolute -right-3 sm:-right-5 top-1/2 -translate-y-1/2 z-20 shadow-md opacity-80 group-hover:opacity-100"
             aria-label="Next"
           >
             <svg className="w-5 h-5 stroke-current stroke-[2]" fill="none" viewBox="0 0 24 24">
@@ -173,7 +173,7 @@ export default function MostPopularCard() {
               <button
                 type="button"
                 onClick={() => toggleFavorite(currentCourse.id)}
-                className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-neutral-700 hover:bg-white hover:text-red-500 transition-colors shadow-xs cursor-pointer"
+                className="btn btn-light btn-icon btn-sm absolute top-4 right-4 z-10 bg-white/80 backdrop-blur-md hover:text-red-500 shadow-xs"
                 aria-label="Add to favorites"
               >
                 <svg
@@ -224,7 +224,7 @@ export default function MostPopularCard() {
                 <div className="flex items-center gap-2.5">
                   <Link
                     href={`/courses/${currentCourse.slug}`}
-                    className="px-4 py-2 bg-white border border-neutral-200 text-neutral-800 text-xs font-bold rounded-lg hover:bg-neutral-50 transition-colors"
+                    className="btn btn-secondary btn-sm"
                   >
                     Learn More
                   </Link>

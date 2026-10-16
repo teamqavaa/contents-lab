@@ -41,7 +41,7 @@ export default function MobileHeaderBar() {
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={isMenuOpen}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100 text-neutral-800"
+              className="btn btn-icon bg-neutral-100 text-neutral-800 hover:bg-neutral-200"
             >
               {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -90,16 +90,16 @@ export default function MobileHeaderBar() {
                   setSigningOut(true);
                   signOut();
                 }}
-                className="flex items-center justify-center gap-2 rounded-full border border-red-200 py-3 text-sm font-bold text-red-600"
+                className="btn btn-danger btn-lg btn-block"
               >
                 {signingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />} Sign out
               </button>
             ) : (
               <>
-                <a href={LOGIN_URL} className="rounded-full border border-neutral-200 py-3 text-center text-sm font-bold">
+                <a href={LOGIN_URL} className="btn btn-secondary btn-lg btn-block">
                   Log In
                 </a>
-                <a href={REGISTER_URL} className="rounded-full bg-neutral-900 py-3 text-center text-sm font-bold text-white">
+                <a href={REGISTER_URL} className="btn btn-dark btn-lg btn-block">
                   Sign Up
                 </a>
               </>

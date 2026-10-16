@@ -39,7 +39,7 @@ export default function CtaSection() {
             <div className="mt-2">
               <Link
                 href="https://www.ready2ignite.com/#/buyTickets/selectTickets?lang=en"
-                className="inline-flex items-center justify-center bg-white text-black hover:bg-neutral-200 font-semibold text-sm py-4 px-8 rounded-full transition-all duration-200 transform hover:scale-[1.02]"
+                className="btn btn-light btn-lg"
               >
                 Sign Up Free
               </Link>

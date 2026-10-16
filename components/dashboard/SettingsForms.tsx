@@ -54,7 +54,7 @@ function SubmitButton({ pending, label }: { pending: boolean; label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex items-center gap-2 self-start rounded-full bg-[#6d5deb] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#5a4ad6] disabled:opacity-60"
+      className="btn btn-primary self-start"
     >
       {pending && <Loader2 className="w-4 h-4 animate-spin" />}
       {label}
@@ -111,7 +111,7 @@ function ProfileForm({ user, profile }: { user: ConnectedUser; profile: UserProf
               const file = e.target.files?.[0];
               setPreview(file ? URL.createObjectURL(file) : null);
             }}
-            className="text-sm text-neutral-600 file:mr-3 file:rounded-full file:border-0 file:bg-[#ece9fd] file:px-4 file:py-2 file:text-xs file:font-semibold file:text-[#4f3fd6]"
+            className="text-sm text-neutral-600 file:mr-3 file:rounded-[var(--radius-btn)] file:border-0 file:bg-[#ece9fd] file:px-4 file:py-2 file:text-xs file:font-semibold file:text-[#4f3fd6]"
           />
         </Field>
       </div>
@@ -186,8 +186,8 @@ export default function SettingsForms({ user, profile }: { user: ConnectedUser; 
             role="tab"
             aria-selected={tab === id}
             onClick={() => setTab(id)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium ${
-              tab === id ? 'bg-[#6d5deb] text-white' : 'bg-white text-neutral-600 hover:text-neutral-900'
+            className={`btn btn-sm ${
+              tab === id ? 'btn-primary' : 'btn-light text-neutral-600 hover:text-neutral-900'
             }`}
           >
             {label}

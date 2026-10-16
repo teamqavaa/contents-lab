@@ -50,7 +50,11 @@ export interface CatalogCourse {
   average_rating: number;
   total_students: number;
   user_id: string;
-  user_email: string;
+  /** Présent seulement pour le propriétaire du cours et les administrateurs */
+  user_email?: string;
+  instructor_name: string;
+  prerequisites: string;
+  target_audience: string;
   category_details: CatalogCategory | null;
   modules: CatalogModule[];
   created_at: string;
@@ -84,4 +88,37 @@ export async function getPublishedCourse(slug: string): Promise<CatalogCourse | 
 /** Catégories racines et leurs sous-catégories. */
 export async function getCategories(): Promise<CatalogCategory[]> {
   return (await fetchJson<CatalogCategory[]>('/api/categories/')) ?? [];
+}
+
+export interface CourseSearchResult {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string;
+  level: string;
+  language: string;
+  thumbnail: string | null;
+  instructor_name: string;
+  category_details: CatalogCategory | null;
+  average_rating: number;
+  total_students: number;
+  lessons_count: number;
+}
+
+export interface CourseSearchResponse {
+  query: string;
+  count: number;
+  results: CourseSearchResult[];
+}
+
+/**
+ * Recherche dans les cours publiés (GET /api/courses/search/?q=) : titre, sous-titre, description,
+ * formateur, catégorie, tags, modules et leçons. Moins de 2 caractères : aucun résultat.
+ */
+export async function searchCourses(query: string, limit = 20): Promise<CourseSearchResponse> {
+  const q = query.trim();
+  const empty = { query: q, count: 0, results: [] };
+  if (q.length < 2) return empty;
+  const params = new URLSearchParams({ q, limit: String(limit) });
+  return (await fetchJson<CourseSearchResponse>(`/api/courses/search/?${params}`)) ?? empty;
 }

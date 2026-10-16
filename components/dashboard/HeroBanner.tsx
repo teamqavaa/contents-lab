@@ -19,12 +19,10 @@ export default function HeroBanner() {
       </h1>
       <Link
         href="/courses"
-        className="relative mt-6 inline-flex items-center gap-3 rounded-full bg-neutral-900 py-2 pl-5 pr-2 text-sm font-medium hover:bg-black transition-colors"
+        className="btn btn-dark relative mt-6"
       >
         Join Now
-        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-neutral-900">
-          <ChevronRight className="w-4 h-4" />
-        </span>
+        <ChevronRight className="w-4 h-4" />
       </Link>
     </section>
   );
