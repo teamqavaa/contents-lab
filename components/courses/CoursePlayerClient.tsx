@@ -1,20 +1,56 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft, X, PlayCircle, FileText, Download,
-  ChevronDown, ChevronUp, SkipBack, SkipForward
+  ChevronDown, ChevronUp, SkipBack, SkipForward, CheckCircle2
 } from 'lucide-react';
+
+import { saveLessonProgress, type Enrollment } from '@/actions/dashboard';
 
 interface CoursePlayerClientProps {
   course: any;
+  /** Progression de l'utilisateur (courses-api /api/enrollments/<slug>/), null si indisponible */
+  enrollment?: Enrollment | null;
+}
+
+// Fréquence d'enregistrement de la position de lecture pendant la lecture
+const POSITION_SAVE_INTERVAL_MS = 15000;
+
+interface YouTubePlayerProps {
+  videoId: string;
+  startSeconds?: number;
+  onEnded: () => void;
+  onProgress?: (seconds: number) => void;
 }
 
 // Isolated component using a container wrapper to completely isolate React's DOM from YouTube's DOM
-function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => void }) {
+function YouTubePlayer({ videoId, startSeconds = 0, onEnded, onProgress }: YouTubePlayerProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
+  // Callbacks lus via des refs : le lecteur n'est recréé que si la vidéo change
+  const onEndedRef = useRef(onEnded);
+  const onProgressRef = useRef(onProgress);
+  const startSecondsRef = useRef(startSeconds);
+
+  useEffect(() => {
+    onEndedRef.current = onEnded;
+    onProgressRef.current = onProgress;
+  }, [onEnded, onProgress]);
+
+  // Sauvegarde périodique de la position pendant la lecture
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const player = playerRef.current;
+      const YT = (window as any).YT;
+      if (!player || typeof player.getPlayerState !== 'function' || !YT?.PlayerState) return;
+      if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+        onProgressRef.current?.(player.getCurrentTime());
+      }
+    }, POSITION_SAVE_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [videoId]);
 
   useEffect(() => {
     let isMounted = true;
@@ -53,12 +89,16 @@ function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => v
             modestbranding: 1,
             rel: 0,
             cc_load_policy: 0,
+            start: Math.floor(startSecondsRef.current) || undefined,
             origin: window.location.origin,
           },
           events: {
             onStateChange: (event: any) => {
               if (event.data === 0) {
-                onEnded();
+                onEndedRef.current();
+              } else if (event.data === 2 && typeof event.target?.getCurrentTime === 'function') {
+                // Pause : on mémorise la position pour reprendre plus tard
+                onProgressRef.current?.(event.target.getCurrentTime());
               }
             },
           },
@@ -114,12 +154,12 @@ function YouTubePlayer({ videoId, onEnded }: { videoId: string; onEnded: () => v
         wrapperRef.current.innerHTML = '';
       }
     };
-  }, [videoId, onEnded]);
+  }, [videoId]);
 
   return <div ref={wrapperRef} className="w-full h-full" />;
 }
 
-export default function CoursePlayerClient({ course }: CoursePlayerClientProps) {
+export default function CoursePlayerClient({ course, enrollment }: CoursePlayerClientProps) {
   const [mounted, setMounted] = useState(false);
 
   const allLessons = useMemo(() => {
@@ -133,9 +173,18 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
     );
   }, [course]);
 
+  const resumeLesson = enrollment?.last_lesson ?? null;
+
   const defaultLesson = useMemo(() => {
-    return allLessons.find((l: any) => l.lesson_type === 'VIDEO') || allLessons[0] || null;
-  }, [allLessons]);
+    // Reprise sur la dernière leçon consultée (courses-api), sinon la première vidéo
+    const resumed = resumeLesson && allLessons.find((l: any) => l.id === resumeLesson.id);
+    return resumed || allLessons.find((l: any) => l.lesson_type === 'VIDEO') || allLessons[0] || null;
+  }, [allLessons, resumeLesson]);
+
+  const [completedIds, setCompletedIds] = useState<Set<string>>(
+    () => new Set(enrollment?.completed_lesson_ids ?? [])
+  );
+  const isTracked = Boolean(enrollment);
 
   const [activeLesson, setActiveLesson] = useState<any>(defaultLesson);
   const [activeTab, setActiveTab] = useState<'transcript' | 'notes' | 'resources'>('resources');
@@ -148,6 +197,31 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
   });
 
   const currentIndex = allLessons.findIndex((l: any) => l.id === activeLesson?.id);
+  const completedCount = allLessons.filter((l: any) => completedIds.has(l.id)).length;
+  const progressPercent = allLessons.length ? Math.round((completedCount / allLessons.length) * 100) : 0;
+
+  const applyEnrollment = useCallback((updated: Enrollment | null) => {
+    if (updated) setCompletedIds(new Set(updated.completed_lesson_ids));
+  }, []);
+
+  const activeLessonId: string | undefined = activeLesson?.id;
+
+  // Leçon ouverte : devient la « dernière leçon » de l'inscription (Continue Watching du dashboard)
+  useEffect(() => {
+    if (!isTracked || !activeLessonId) return;
+    saveLessonProgress(course.slug, activeLessonId).then(applyEnrollment);
+  }, [isTracked, activeLessonId, course.slug, applyEnrollment]);
+
+  const saveLessonPosition = useCallback((seconds: number) => {
+    if (!isTracked || !activeLessonId) return;
+    saveLessonProgress(course.slug, activeLessonId, { positionSeconds: seconds });
+  }, [isTracked, activeLessonId, course.slug]);
+
+  const markLessonCompleted = useCallback(async (lessonId: string) => {
+    if (!isTracked || !lessonId) return;
+    setCompletedIds((prev) => new Set(prev).add(lessonId));
+    applyEnrollment(await saveLessonProgress(course.slug, lessonId, { completed: true }));
+  }, [isTracked, course.slug, applyEnrollment]);
 
   useEffect(() => {
     setMounted(true);
@@ -180,6 +254,12 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
       setActiveLesson(nextLesson);
       setOpenModules(prev => ({ ...prev, [nextLesson.moduleId]: true }));
     }
+  };
+
+  // Fin de la vidéo : leçon terminée puis passage à la suivante
+  const handleVideoEnded = () => {
+    if (activeLesson?.id) markLessonCompleted(activeLesson.id);
+    handleNextLesson();
   };
 
   useEffect(() => {
@@ -229,13 +309,20 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
             <div className="flex justify-between items-center text-xs">
               <span className="font-bold text-neutral-700">Your progress</span>
               <span className="text-neutral-400 font-medium">
-                {currentIndex !== -1 ? currentIndex + 1 : 0} of {allLessons.length} lessons
+                {completedCount} of {allLessons.length} lessons · {progressPercent}%
               </span>
             </div>
-            <div className="w-full bg-neutral-200 h-2 rounded-full overflow-hidden">
+            <div
+              className="w-full bg-neutral-200 h-2 rounded-full overflow-hidden"
+              role="progressbar"
+              aria-label="Course progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progressPercent}
+            >
               <div
                 className="bg-blue-600 h-full transition-all duration-300"
-                style={{ width: `${((currentIndex + 1) / (allLessons.length || 1)) * 100}%` }}
+                style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
@@ -273,7 +360,13 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
                           }`}
                         >
                           <div className="mt-0.5 text-neutral-400 shrink-0">
-                            {lesson.lesson_type === 'VIDEO' ? <PlayCircle className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                            {completedIds.has(lesson.id) ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" aria-label="Completed" />
+                            ) : lesson.lesson_type === 'VIDEO' ? (
+                              <PlayCircle className="w-4 h-4" />
+                            ) : (
+                              <FileText className="w-4 h-4" />
+                            )}
                           </div>
                           <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                             <span className={`text-xs font-semibold truncate ${isSelected ? 'text-blue-900 font-bold' : 'text-neutral-800'}`}>
@@ -300,7 +393,13 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
         <div className="w-full bg-neutral-950 border-b border-neutral-800 shadow-2xl shrink-0 flex items-center justify-center">
           <div className="w-full max-w-5xl aspect-video relative flex items-center justify-center">
             {videoId && mounted ? (
-              <YouTubePlayer key={videoId} videoId={videoId} onEnded={handleNextLesson} />
+              <YouTubePlayer
+                key={`${activeLesson?.id}-${videoId}`}
+                videoId={videoId}
+                startSeconds={activeLesson?.id === resumeLesson?.id ? resumeLesson?.position_seconds : 0}
+                onEnded={handleVideoEnded}
+                onProgress={saveLessonPosition}
+              />
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 text-neutral-400 p-6 text-center w-full h-full">
                 <PlayCircle className="w-12 h-12 text-neutral-600" />
@@ -323,6 +422,16 @@ export default function CoursePlayerClient({ course }: CoursePlayerClientProps) 
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              {isTracked && activeLesson && (
+                <button
+                  onClick={() => markLessonCompleted(activeLesson.id)}
+                  disabled={completedIds.has(activeLesson.id)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white disabled:bg-neutral-800 disabled:text-emerald-400 transition-colors text-xs font-semibold"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>{completedIds.has(activeLesson.id) ? 'Completed' : 'Mark as complete'}</span>
+                </button>
+              )}
               <button
                 onClick={handlePrevLesson}
                 disabled={currentIndex <= 0}

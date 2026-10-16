@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { Course } from '@/actions/courses';
 import AddToCartButton from './AddToCartButton';
 
@@ -9,9 +10,17 @@ interface CourseCardProps {
     description?: string;
   };
   initialInCart?: boolean;
+  /** Mode « Continue watching » (dashboard) : barre de progression de lecture à la place du prix. */
+  progress?: {
+    percentage: number;
+    completedLessons: number;
+    totalLessons: number;
+    href: string;
+    category?: string;
+  };
 }
 
-export default function CourseCard({ course, initialInCart }: CourseCardProps) {
+export default function CourseCard({ course, initialInCart, progress }: CourseCardProps) {
   const {
     id,
     title,
@@ -28,12 +37,17 @@ export default function CourseCard({ course, initialInCart }: CourseCardProps) {
     <div className="flex flex-col bg-white rounded-3xl shadow-sm border border-neutral-100 hover:shadow-md transition-shadow overflow-hidden h-full">
       <div className="relative w-full aspect-[16/10] bg-neutral-100">
         <Image
-          src={image}
+          src={image || '/career.jpg'}
           alt={title}
           fill
           className="object-cover"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
         />
+        {progress?.category && (
+          <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#6d5deb]">
+            {progress.category}
+          </span>
+        )}
       </div>
 
       <div className="flex flex-col flex-1 p-5">
@@ -69,20 +83,52 @@ export default function CourseCard({ course, initialInCart }: CourseCardProps) {
           </p>
         )}
 
-        <div className="mt-auto pt-3 border-t border-neutral-100 flex items-center justify-between gap-3">
-          <div className="flex flex-col">
-            <span className="text-lg font-extrabold text-neutral-900 leading-none">
-              ${price.toFixed(2)} <span className="text-[10px] font-semibold text-neutral-500">USD</span>
-            </span>
-            {originalPrice && (
-              <span className="text-xs font-semibold text-neutral-400 line-through mt-0.5">
-                ${originalPrice.toFixed(2)} USD
-              </span>
-            )}
+        {progress ? (
+          <div className="mt-auto pt-3 flex flex-col gap-3">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-neutral-500">
+                <span>
+                  {progress.completedLessons}/{progress.totalLessons} lessons watched
+                </span>
+                <span className="text-neutral-900">{Math.round(progress.percentage)}%</span>
+              </div>
+              <div
+                className="h-1.5 w-full overflow-hidden rounded-full bg-neutral-100"
+                role="progressbar"
+                aria-label={`Progress of ${title}`}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(progress.percentage)}
+              >
+                <div
+                  className="h-full rounded-full bg-[#6d5deb] transition-all duration-500"
+                  style={{ width: `${Math.min(100, Math.max(0, progress.percentage))}%` }}
+                />
+              </div>
+            </div>
+            <Link
+              href={progress.href}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full bg-neutral-900 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-[#6d5deb]"
+            >
+              {progress.percentage >= 100 ? 'Watch again' : progress.completedLessons > 0 ? 'Continue' : 'Start course'}
+            </Link>
           </div>
+        ) : (
+          <div className="mt-auto pt-3 border-t border-neutral-100 flex items-center justify-between gap-3">
+            <div className="flex flex-col">
+              <span className="text-lg font-extrabold text-neutral-900 leading-none">
+                ${price.toFixed(2)} <span className="text-[10px] font-semibold text-neutral-500">USD</span>
+              </span>
+              {originalPrice && (
+                <span className="text-xs font-semibold text-neutral-400 line-through mt-0.5">
+                  ${originalPrice.toFixed(2)} USD
+                </span>
+              )}
+            </div>
 
-          <AddToCartButton courseId={id} initialInCart={initialInCart} courseSlug={course.slug} />
-        </div>
+            <AddToCartButton courseId={id} initialInCart={initialInCart} courseSlug={course.slug} />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { getMyEnrolledCourses } from '@/actions/cart';
+import { getEnrollment } from '@/actions/dashboard';
 import CoursePlayerClient from '@/components/courses/CoursePlayerClient';
 import { checkUserEnrollment } from '@/lib/enrollmentCheck';
 import { getCourseBySlug } from '@/lib/courseService';
@@ -25,13 +26,13 @@ export default async function CourseLearnPage({ params }: LearnPageProps) {
     redirect(`/course/${slug}`);
   }
 
-  // 4. Charger les détails complets du cours depuis l'API Cloud Run
-  const course = await getCourseBySlug(slug);
+  // 4. Charger les détails complets du cours et la progression de lecture de l'utilisateur
+  const [course, enrollment] = await Promise.all([getCourseBySlug(slug), getEnrollment(slug)]);
 
   if (!course) {
     notFound();
   }
 
   // 5. Rendu du lecteur interactif client
-  return <CoursePlayerClient course={course} />;
+  return <CoursePlayerClient course={course} enrollment={enrollment} />;
 }

@@ -194,7 +194,7 @@ export default function UserMenu({ user: initialUser }: UserMenuProps) {
 
             <div className="space-y-0.5">
               <Link
-                href="/settings"
+                href="/dashboard/settings"
                 className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
                 <Settings className="w-3.5 h-3.5 text-gray-500" />
