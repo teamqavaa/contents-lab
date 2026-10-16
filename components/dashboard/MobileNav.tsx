@@ -4,12 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import LogoutButton from './LogoutButton';
-import { OVERVIEW_LINKS, SETTINGS_LINK, isActiveLink } from './navigation';
+import { SETTINGS_LINK, isActiveLink, overviewLinks } from './navigation';
 
 /** Navigation du dashboard sur mobile / tablette (la sidebar est masquée). */
-export default function MobileNav() {
+export default function MobileNav({ canManage = false }: { canManage?: boolean }) {
   const pathname = usePathname() || '';
-  const links = [...OVERVIEW_LINKS, SETTINGS_LINK];
+  const links = [...overviewLinks(canManage), SETTINGS_LINK];
 
   return (
     <nav className="lg:hidden flex items-center gap-1 overflow-x-auto pb-1" aria-label="Dashboard">

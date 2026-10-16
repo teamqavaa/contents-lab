@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import IgniteLogo from './IgniteLogo';
 import LogoutButton from './LogoutButton';
-import { OVERVIEW_LINKS, SETTINGS_LINK, isActiveLink } from './navigation';
+import { SETTINGS_LINK, isActiveLink, overviewLinks } from './navigation';
 
 function NavItem({ href, label, icon: Icon }: { href: string; label: string; icon: typeof SETTINGS_LINK.icon }) {
   const pathname = usePathname() || '';
@@ -24,8 +24,8 @@ function NavItem({ href, label, icon: Icon }: { href: string; label: string; ico
   );
 }
 
-/** Barre latérale du dashboard (écrans larges). */
-export default function Sidebar() {
+/** Barre latérale du dashboard (écrans larges). `canManage` ajoute l'onglet « Manage courses ». */
+export default function Sidebar({ canManage = false }: { canManage?: boolean }) {
   return (
     <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-white border-r border-neutral-100 px-5 py-7 sticky top-0 h-screen">
       <div className="px-2">
@@ -34,7 +34,7 @@ export default function Sidebar() {
 
       <nav className="mt-12 flex flex-col gap-1" aria-label="Overview">
         <p className="px-3 mb-2 text-[11px] font-semibold tracking-widest text-neutral-400 uppercase">Overview</p>
-        {OVERVIEW_LINKS.map((link) => (
+        {overviewLinks(canManage).map((link) => (
           <NavItem key={link.href} {...link} />
         ))}
       </nav>

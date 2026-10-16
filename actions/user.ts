@@ -12,6 +12,8 @@ export interface ConnectedUser {
   roles: string[];
   auth_provider: string;
   is_active: boolean;
+  is_staff?: boolean;
+  is_superuser?: boolean;
 }
 
 export async function getConnectedUser(): Promise<ConnectedUser | null> {

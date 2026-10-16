@@ -56,7 +56,8 @@ async function getJson<T>(path: string): Promise<T | null> {
   try {
     const res = await fetch(`${COURSES_API_URL}${path}`, { headers, cache: 'no-store' });
     if (!res.ok) {
-      console.error(`courses-api ${path} :`, res.status);
+      // 404 = pas d'inscription à ce cours : cas normal, pas une erreur
+      if (res.status !== 404) console.error(`courses-api ${path} :`, res.status);
       return null;
     }
     return (await res.json()) as T;

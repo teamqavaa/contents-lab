@@ -8,10 +8,11 @@ interface TopbarProps {
   name?: string | null;
   email?: string | null;
   avatarUrl?: string | null;
+  canManage?: boolean;
 }
 
 /** En-tête du dashboard : recherche dans mes cours, notifications, utilisateur connecté. */
-export default function Topbar({ name, email, avatarUrl }: TopbarProps) {
+export default function Topbar({ name, email, avatarUrl, canManage = false }: TopbarProps) {
   return (
     <header className="flex flex-col gap-4">
       <div className="lg:hidden">
@@ -48,7 +49,7 @@ export default function Topbar({ name, email, avatarUrl }: TopbarProps) {
         </div>
       </div>
 
-      <MobileNav />
+      <MobileNav canManage={canManage} />
     </header>
   );
 }

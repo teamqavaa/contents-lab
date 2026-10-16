@@ -1,6 +1,10 @@
-// app/api/auth/me/route.ts (App A)
+// app/api/auth/me/route.ts — session de l'utilisateur pour les composants client (header, menu mobile)
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+
+import { getMyProfile } from "@/actions/settings";
+import { getConnectedUser } from "@/actions/user";
+import { canManageCourses } from "@/lib/roles";
 
 export async function GET() {
   const cookieStore = await cookies();
@@ -10,5 +14,17 @@ export async function GET() {
     return NextResponse.json({ authenticated: false }, { status: 401 });
   }
 
-  return NextResponse.json({ authenticated: true });
+  // Le token httpOnly n'est jamais renvoyé : seulement ce que l'interface affiche
+  const [user, profile] = await Promise.all([getConnectedUser(), getMyProfile()]);
+  return NextResponse.json({
+    authenticated: true,
+    user: user
+      ? {
+          name: user.name,
+          email: user.email,
+          avatarUrl: profile?.avatar ?? null,
+          canManageCourses: canManageCourses(user),
+        }
+      : null,
+  });
 }

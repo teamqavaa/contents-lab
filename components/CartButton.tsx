@@ -7,49 +7,41 @@ import { getMyCart } from '@/actions/cart';
 
 interface CartButtonProps {
   initialCount?: number;
+  className?: string;
 }
 
-export default function CartButton({ initialCount = 0 }: CartButtonProps) {
+/** Panier de l'utilisateur connecté (courses-api) : icône + nombre d'articles, mis à jour sur « cartUpdate ». */
+export default function CartButton({ initialCount = 0, className = '' }: CartButtonProps) {
   const [cartCount, setCartCount] = useState<number>(initialCount);
 
-  const fetchCartData = async () => {
-    try {
-      const cartData = await getMyCart();
-      if (cartData) {
-        const count = Number(cartData.items_count) || cartData.items?.length || 0;
-        setCartCount(count);
-      } else {
+  useEffect(() => {
+    const fetchCartData = async () => {
+      try {
+        const cartData = await getMyCart();
+        setCartCount(cartData ? Number(cartData.items_count) || cartData.items?.length || 0 : 0);
+      } catch {
         setCartCount(0);
       }
-    } catch {
-      setCartCount(0);
-    }
-  };
-
-  useEffect(() => {
-    fetchCartData();
-
-    // Écoute l'événement 'cartUpdate' émis lors d'un ajout ou d'une suppression
-    const handleCartUpdate = () => fetchCartData();
-    window.addEventListener('cartUpdate', handleCartUpdate);
-
-    return () => {
-      window.removeEventListener('cartUpdate', handleCartUpdate);
     };
+
+    fetchCartData();
+    // Émis lors d'un ajout ou d'une suppression dans le panier
+    window.addEventListener('cartUpdate', fetchCartData);
+    return () => window.removeEventListener('cartUpdate', fetchCartData);
   }, []);
 
   return (
     <Link
       href="/carts"
-      className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-gray-700 hover:text-black transition-colors rounded-full hover:bg-gray-100"
+      aria-label={`Cart, ${cartCount} item${cartCount === 1 ? '' : 's'}`}
+      className={`relative flex items-center justify-center w-10 h-10 rounded-full border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50 transition-colors ${className}`}
     >
-      <div className="relative flex items-center justify-center">
-        <ShoppingCart className="w-4 h-4" />
-        <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[9px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center border border-white">
+      <ShoppingCart className="w-[18px] h-[18px]" aria-hidden="true" />
+      {cartCount > 0 && (
+        <span className="absolute -top-1 -right-1 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-emerald-500 px-1 text-[10px] font-bold text-white">
           {cartCount}
         </span>
-      </div>
-      <span>Cart</span>
+      )}
     </Link>
   );
 }

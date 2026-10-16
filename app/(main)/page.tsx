@@ -1,28 +1,28 @@
-// app/page.tsx (App A)
+// app/(main)/page.tsx — accueil : page d'apprentissage si l'utilisateur est connecté, sinon page vitrine
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import HomePage from "@/components/home/Home";
 
-// Forcer Next.js à traiter cette page comme dynamic (évite l'erreur au prerender)
+import { getPublishedCourses } from "@/actions/catalog";
+import { getLearningStats, getMyEnrollments } from "@/actions/dashboard";
+import { getConnectedUser } from "@/actions/user";
+import HomePage from "@/components/home/Home";
+import LearningHome from "@/components/learning/LearningHome";
+
+// Dépend des cookies de session
 export const dynamic = "force-dynamic";
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}) {
-  const resolvedSearchParams = await searchParams;
-  const redirectTo = resolvedSearchParams.redirect;
+export default async function Home() {
+  // Le cas « connecté + ?redirect= » est géré par proxy.ts
+  const token = (await cookies()).get("access_token")?.value;
+  if (!token) return <HomePage />;
 
-  // Récupération des cookies côté serveur
-  const cookieStore = await cookies();
-  const token = cookieStore.get("app_a_token")?.value;
+  const [user, enrollments, stats, catalog] = await Promise.all([
+    getConnectedUser(),
+    getMyEnrollments(),
+    getLearningStats(30),
+    getPublishedCourses(),
+  ]);
+  // Token refusé par le SSO (session révoquée) : page vitrine
+  if (!user) return <HomePage />;
 
-  // Si l'utilisateur est connecté ET qu'un paramètre redirect est présent
-  if (token && redirectTo) {
-    const destination = Array.isArray(redirectTo) ? redirectTo[0] : redirectTo;
-    redirect(destination);
-  }
-
-  return <HomePage />;
+  return <LearningHome user={user} enrollments={enrollments} stats={stats} catalog={catalog} />;
 }

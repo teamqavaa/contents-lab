@@ -11,7 +11,17 @@ function greetingFor(hour: number) {
 const subscribe = () => () => {};
 
 /** Salutation selon l'heure locale du navigateur ("Hello" pendant le rendu serveur). */
-export default function Greeting({ firstName }: { firstName: string }) {
+export default function Greeting({
+  firstName,
+  as: Tag = 'h3',
+  emoji = '🔥',
+  className = 'text-lg font-bold text-neutral-900',
+}: {
+  firstName: string;
+  as?: 'h1' | 'h3';
+  emoji?: string;
+  className?: string;
+}) {
   const greeting = useSyncExternalStore(
     subscribe,
     () => greetingFor(new Date().getHours()),
@@ -19,9 +29,9 @@ export default function Greeting({ firstName }: { firstName: string }) {
   );
 
   return (
-    <h3 className="text-lg font-bold text-neutral-900">
+    <Tag className={className}>
       {greeting}
-      {firstName ? ` ${firstName}` : ''} <span aria-hidden="true">🔥</span>
-    </h3>
+      {firstName ? `, ${firstName}` : ''} <span aria-hidden="true">{emoji}</span>
+    </Tag>
   );
 }
