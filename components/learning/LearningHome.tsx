@@ -8,6 +8,7 @@ import {
   Clock,
   FileText,
   Flame,
+  FlaskConical,
   GraduationCap,
   Info,
   Target,
@@ -31,6 +32,7 @@ interface LearningHomeProps {
   enrollments: Enrollment[];
   stats: LearningStats | null;
   catalog: CatalogCourse[];
+  labsCount: number;
 }
 
 function Thumbnail({ src, className = '' }: { src?: string | null; className?: string }) {
@@ -75,17 +77,40 @@ function StatTile({ icon: Icon, value, label, tone }: { icon: typeof Trophy; val
   );
 }
 
-function SideTile({ icon: Icon, value, label }: { icon: typeof Trophy; value: string | number; label: string }) {
-  return (
-    <div className="flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white p-4">
+function SideTile({ icon: Icon, value, label, href }: { icon: typeof Trophy; value: string | number; label: string; href?: string }) {
+  const content = (
+    <>
       <span className="flex h-12 w-12 items-center justify-center rounded-full bg-neutral-100 text-neutral-600">
         <Icon className="h-6 w-6" aria-hidden="true" />
       </span>
-      <div>
+      <div className="min-w-0 flex-1">
         <p className="text-2xl font-bold text-neutral-900">{value}</p>
         <p className="text-sm text-neutral-500">{label}</p>
       </div>
-    </div>
+      {href && (
+        <ArrowRight
+          className="h-4 w-4 shrink-0 text-neutral-400 transition-transform group-hover:translate-x-0.5"
+          aria-hidden="true"
+        />
+      )}
+    </>
+  );
+
+  if (!href) {
+    return (
+      <div className="flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white p-4">
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="group flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white p-4 transition-colors hover:border-[#4f3fd6]/40 hover:bg-[#faf9ff] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4f3fd6]"
+    >
+      {content}
+    </Link>
   );
 }
 
@@ -93,7 +118,7 @@ function SideTile({ icon: Icon, value, label }: { icon: typeof Trophy; value: st
  * Accueil personnalisé (maquette « Trenning » adaptée) : salutation, chiffres clés, nouveauté du catalogue,
  * cours en cours, nouveaux cours, temps d'apprentissage et objectifs. Données : SSO + courses-api.
  */
-export default function LearningHome({ user, enrollments, stats, catalog }: LearningHomeProps) {
+export default function LearningHome({ user, enrollments, stats, catalog, labsCount }: LearningHomeProps) {
   const firstName = getFirstName(user?.name, user?.email);
   const inProgress = enrollments.filter((e) => e.progress_percentage < 100).slice(0, 4);
   const enrolledIds = new Set(enrollments.map((e) => e.course.id));
@@ -268,6 +293,7 @@ export default function LearningHome({ user, enrollments, stats, catalog }: Lear
           {/* Colonne de droite */}
           <aside className="flex flex-col gap-4">
             <SideTile icon={ClipboardCheck} value={totalLessons} label="Learning content" />
+            <SideTile icon={FlaskConical} value={labsCount} label="Labs" href="/dashboard/labs" />
             <SideTile icon={Timer} value={formatMinutes(stats?.learning_minutes ?? 0)} label="Learning time" />
 
             <section className="rounded-2xl border border-neutral-200 p-5" aria-labelledby="goals-title">

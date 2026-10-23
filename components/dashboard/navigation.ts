@@ -1,9 +1,10 @@
-import { BookOpen, LayoutGrid, PenSquare, Settings } from 'lucide-react';
+import { BookOpen, FlaskConical, LayoutGrid, PenSquare, Settings } from 'lucide-react';
 
 /** Onglets du dashboard (sidebar et navigation mobile). */
 export const OVERVIEW_LINKS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
   { href: '/dashboard/courses', label: 'Courses', icon: BookOpen },
+  { href: '/dashboard/labs', label: 'Labs', icon: FlaskConical },
 ] as const;
 
 /** Onglet réservé aux instructeurs et administrateurs (lib/roles.ts → canManageCourses). */

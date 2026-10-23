@@ -1,0 +1,485 @@
+"use client"
+
+import { useEffect, useRef, useState } from "react"
+import { FileCode, ListChecks, Terminal } from "lucide-react"
+
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/lab/ui/resizable"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/lab/ui/tabs"
+
+import { LabCode } from "@/components/lab/lab-code"
+import { LabOutput } from "@/components/lab/lab-output"
+import { LabSteps } from "@/components/lab/lab-steps"
+import { LabTopBar } from "@/components/lab/lab-topbar"
+import type { RunOutput, SaveStatus, StepStatus } from "@/components/lab/lab-types"
+import { useMediaQuery } from "@/lib/lab/use-media-query"
+import type { Lab } from "@/lib/lab/types"
+import { LANGUAGE_CONFIG } from "@/lib/lab/languages"
+import { computeProgress, getCurrentStepNumber, translateRunError } from "@/lib/lab/lab-utils"
+import {
+  completeLab,
+  executeLab,
+  getLabSession,
+  resetLabSession,
+  saveLabSession,
+  sendLabHeartbeat,
+  uncompleteLab,
+} from "@/actions/lab-sessions"
+
+const SAVE_DEBOUNCE_MS = 1000
+const HEARTBEAT_INTERVAL_MS = 30000
+
+type StoredProgress = {
+  stepStatus: Record<string, StepStatus>
+  hintsRevealed: Record<string, boolean>
+  openStepIds: string[]
+}
+
+export default function LabWorkspace({ lab }: { lab: Lab }) {
+  const language = lab.language
+  const config = LANGUAGE_CONFIG[language]
+  const isDesktop = useMediaQuery("(min-width: 1024px)")
+  const progressStorageKey = `lab:${lab.id}:progress`
+  const codeStorageKey = `lab:${lab.id}:code`
+
+  const [activeStepId, setActiveStepId] = useState(lab.steps[0]?.id ?? "")
+  const [openStepIds, setOpenStepIds] = useState<string[]>([lab.steps[0]?.id ?? ""])
+  const [stepStatus, setStepStatus] = useState<Record<string, StepStatus>>(() => {
+    const initial: Record<string, StepStatus> = {}
+    lab.steps.forEach((step, index) => {
+      initial[step.id] = index === 0 ? "in_progress" : "locked"
+    })
+    return initial
+  })
+  const [hintsRevealed, setHintsRevealed] = useState<Record<string, boolean>>({})
+  // Each step owns a code buffer seeded with its starter code, so switching
+  // steps never wipes the student's edits.
+  const [codeByStep, setCodeByStep] = useState<Record<string, string>>(() =>
+    Object.fromEntries(lab.steps.map((step) => [step.id, step.starterCode ?? ""]))
+  )
+  const code = codeByStep[activeStepId] ?? ""
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
+  const [sessionCompleted, setSessionCompleted] = useState(false)
+  const [restartOpen, setRestartOpen] = useState(false)
+  const [isRunning, setIsRunning] = useState(false)
+  const [runOutput, setRunOutput] = useState<RunOutput>({
+    text: "Run your code to see logs appear here.",
+    status: "idle",
+  })
+
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const codeRef = useRef(code)
+  // Tracks the last synced done-count so the effect fires only on real changes;
+  // seeding it at mount keeps a plain page view from creating a session.
+  const doneCountRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    codeRef.current = code
+  }, [code])
+
+  const readStoredProgress = (): StoredProgress | null => {
+    if (typeof window === "undefined") return null
+    try {
+      const raw = window.localStorage.getItem(progressStorageKey)
+      return raw ? (JSON.parse(raw) as StoredProgress) : null
+    } catch {
+      return null
+    }
+  }
+
+  const readStoredCode = (): Record<string, string> | null => {
+    if (typeof window === "undefined") return null
+    try {
+      const raw = window.localStorage.getItem(codeStorageKey)
+      return raw ? (JSON.parse(raw) as Record<string, string>) : null
+    } catch {
+      return null
+    }
+  }
+
+  const triggerSave = async (currentCode: string) => {
+    setSaveStatus("saving")
+    const result = await saveLabSession(lab.id, currentCode)
+    if (result.ok) {
+      setSaveStatus("saved")
+      // Reset the chip back to idle so the next keystroke shows "Saving..." again.
+      setTimeout(() => setSaveStatus("idle"), 1500)
+    } else {
+      setSaveStatus("failed")
+    }
+  }
+
+  const flushSave = async () => {
+    // Only send when a debounce is pending; a plain reload has nothing new.
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+      await triggerSave(codeRef.current)
+    }
+  }
+
+  // Session load + local progress restore
+  useEffect(() => {
+    async function initSession() {
+      const result = await getLabSession(lab.id)
+      if (!result.ok) return
+      // Per-step buffers live locally; the backend stores only the last active
+      // code, so it acts as the fallback on a device without local data.
+      const storedCode = readStoredCode()
+      const savedCode = result.currentCode
+      if (storedCode) {
+        setCodeByStep((prev) => ({ ...prev, ...storedCode }))
+      } else if (savedCode) {
+        const firstStep = lab.steps[0]
+        if (firstStep) {
+          setCodeByStep((prev) => ({ ...prev, [firstStep.id]: savedCode }))
+        }
+      }
+      if (result.status === "completed") {
+        setSessionCompleted(true)
+        setStepStatus(
+          Object.fromEntries(lab.steps.map((step) => [step.id, "done"]))
+        )
+      } else {
+        // Reloads kept earlier progress client-side; a completed session
+        // takes precedence and overrides everything to done.
+        const stored = readStoredProgress()
+        if (stored) {
+          setStepStatus((prev) => ({ ...prev, ...stored.stepStatus }))
+          setHintsRevealed((prev) => ({ ...prev, ...stored.hintsRevealed }))
+          if (stored.openStepIds.length > 0) setOpenStepIds(stored.openStepIds)
+        }
+      }
+    }
+    initSession()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lab.id])
+
+  const allStepsDone = lab.steps.every((step) => stepStatus[step.id] === "done")
+
+  // Completing the last step auto-marks the lab done; the manual button stays
+  // as fallback when the backend rejects it (e.g. no session yet).
+  useEffect(() => {
+    if (!allStepsDone || sessionCompleted) return
+    let cancelled = false
+    async function run() {
+      const result = await completeLab(lab.id)
+      if (!cancelled && result.ok) {
+        setSessionCompleted(true)
+        setStepStatus(
+          Object.fromEntries(lab.steps.map((step) => [step.id, "done"]))
+        )
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allStepsDone, sessionCompleted, lab.id])
+
+  // Persist step progress every time it changes so a refresh keeps it.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const payload: StoredProgress = { stepStatus, hintsRevealed, openStepIds }
+      window.localStorage.setItem(progressStorageKey, JSON.stringify(payload))
+    } catch {
+      // Storage can throw in private mode; the in-memory state still works.
+    }
+  }, [stepStatus, hintsRevealed, openStepIds, progressStorageKey])
+
+  // Persist per-step buffers so edits survive a refresh on this device.
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      window.localStorage.setItem(codeStorageKey, JSON.stringify(codeByStep))
+    } catch {
+      // Storage can throw in private mode; the in-memory state still works.
+    }
+  }, [codeByStep, codeStorageKey])
+
+  // Mirror the finished-step count to the backend so the lab card shows real
+  // progress. Fires only when the count changes; code edits keep their own
+  // debounced save, and a plain page view never creates a session.
+  useEffect(() => {
+    const doneCount = lab.steps.filter((step) => stepStatus[step.id] === "done").length
+    if (doneCountRef.current === null) {
+      doneCountRef.current = doneCount
+      return
+    }
+    if (doneCountRef.current === doneCount) return
+    doneCountRef.current = doneCount
+    void saveLabSession(lab.id, codeRef.current, doneCount)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stepStatus, lab.id])
+
+  // Heartbeat
+  useEffect(() => {
+    // Keep the backend session alive so last_active_at stays fresh while the
+    // student is working; stops on unmount to avoid orphan intervals.
+    const interval = setInterval(() => {
+      sendLabHeartbeat(lab.id)
+    }, HEARTBEAT_INTERVAL_MS)
+    return () => clearInterval(interval)
+  }, [lab.id])
+
+  // Save pending edits when the tab hides or the component unmounts; the
+  // debounce alone loses the final keystrokes if the student leaves within
+  // the save window.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flushSave()
+    }
+    document.addEventListener("visibilitychange", onVisibility)
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility)
+      flushSave()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleCodeChange = (newCode: string) => {
+    setCodeByStep((prev) => ({ ...prev, [activeStepId]: newCode }))
+    // Debounce autosave: firing on every keystroke would spam the backend.
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    saveTimeoutRef.current = setTimeout(() => {
+      triggerSave(newCode)
+      saveTimeoutRef.current = null
+    }, SAVE_DEBOUNCE_MS)
+  }
+
+  const handleRun = async () => {
+    setIsRunning(true)
+    setRunOutput({ text: "Running...", status: "running" })
+
+    const result = await executeLab({
+      language,
+      version: config.version,
+      filename: config.filename,
+      code,
+    })
+
+    if (result.ok) {
+      let out = ""
+      if (result.stdout) out += result.stdout
+      if (result.stderr) out += (result.stdout ? "\n[stderr]:\n" : "[stderr]:\n") + result.stderr
+      if (!result.stdout && !result.stderr) out = "Code executed successfully with no output."
+      if (result.exitCode !== 0 && result.exitCode !== null) out += `\n[Exited with code ${result.exitCode}]`
+      setRunOutput({ text: out, status: "success" })
+    } else {
+      setRunOutput({ text: translateRunError(result), status: "error" })
+    }
+
+    setIsRunning(false)
+  }
+
+  const handleComplete = async () => {
+    const result = await completeLab(lab.id)
+    if (result.ok) {
+      setSessionCompleted(true)
+      setStepStatus(
+        Object.fromEntries(lab.steps.map((step) => [step.id, "done"]))
+      )
+    }
+  }
+
+  const handleRestart = async () => {
+    // Wipe every piece of per-attempt state so the lab looks brand new. The
+    // API call runs after so a reload keeps the cleared state.
+    setSessionCompleted(false)
+    setCodeByStep(
+      Object.fromEntries(lab.steps.map((step) => [step.id, step.starterCode ?? ""]))
+    )
+    setStepStatus(
+      Object.fromEntries(lab.steps.map((step, index) => [step.id, index === 0 ? "in_progress" : "locked"]))
+    )
+    setActiveStepId(lab.steps[0].id)
+    setOpenStepIds([lab.steps[0].id])
+    setHintsRevealed({})
+    setRunOutput({ text: "Run your code to see logs appear here.", status: "idle" })
+    setSaveStatus("idle")
+    setRestartOpen(false)
+
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem(progressStorageKey)
+        window.localStorage.removeItem(codeStorageKey)
+      } catch {
+        // Ignore; storage errors do not block a restart.
+      }
+    }
+
+    await resetLabSession(lab.id)
+  }
+
+  const toggleHint = (stepId: string) => {
+    setHintsRevealed((prev) => ({ ...prev, [stepId]: !prev[stepId] }))
+  }
+
+  const toggleStepDone = (stepId: string) => {
+    // Undoing a step after auto-completion reverts the completion state too,
+    // so the student can keep working and the button becomes active again.
+    if (stepStatus[stepId] === "done" && sessionCompleted) {
+      setSessionCompleted(false)
+      void uncompleteLab(lab.id)
+    }
+    setStepStatus((prev) => {
+      const next = { ...prev }
+      const index = lab.steps.findIndex((step) => step.id === stepId)
+      if (prev[stepId] === "done") {
+        next[stepId] = "in_progress"
+        // Undoing a step re-locks every step after it so order stays enforced.
+        for (let i = index + 1; i < lab.steps.length; i++) {
+          next[lab.steps[i].id] = "locked"
+        }
+        return next
+      }
+      // Completing a step unlocks the following one so order stays enforced.
+      next[stepId] = "done"
+      const following = lab.steps[index + 1]
+      if (following && prev[following.id] === "locked") {
+        next[following.id] = "in_progress"
+      }
+      return next
+    })
+  }
+
+  const handleOpenChange = (value: string[]) => {
+    setOpenStepIds(value)
+  }
+
+  const handleStepChange = (stepId: string) => {
+    // Push the step we are leaving to the backend before switching; the editor
+    // value and codeRef still hold the old step at this point.
+    flushSave()
+    setActiveStepId(stepId)
+  }
+
+  const currentStepNumber = getCurrentStepNumber(lab.steps, activeStepId)
+  const progress = computeProgress(lab.steps, stepStatus)
+
+  // A lab without objectives cannot render a step list; show a clear message
+  // instead of crashing on the missing first step.
+  if (lab.steps.length === 0) {
+    return (
+      <div className="lab-theme flex h-dvh items-center justify-center bg-background text-center">
+        <div>
+          <p className="text-sm font-medium text-foreground">This lab has no steps.</p>
+          <p className="text-sm text-muted-foreground">
+            Add objectives in the backend to enable it.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const stepsPanel = (
+    <LabSteps
+      className="h-full"
+      steps={lab.steps}
+      stepStatus={stepStatus}
+      activeStepId={activeStepId}
+      openStepIds={openStepIds}
+      hintsRevealed={hintsRevealed}
+      onStepChange={handleStepChange}
+      onOpenChange={handleOpenChange}
+      onToggleHint={toggleHint}
+      onToggleDone={toggleStepDone}
+    />
+  )
+
+  const codePanel = (
+    <LabCode
+      className="h-full"
+      language={language}
+      filename={config.filename}
+      value={code}
+      saveStatus={saveStatus}
+      isRunning={isRunning}
+      onChange={handleCodeChange}
+      onRun={handleRun}
+    />
+  )
+
+  const outputPanel = <LabOutput className="h-full" runOutput={runOutput} />
+
+  const desktopLayout = (
+    <ResizablePanelGroup orientation="horizontal" className="h-full">
+      <ResizablePanel defaultSize="22" minSize="18" className="min-h-0">
+        {stepsPanel}
+      </ResizablePanel>
+
+      <ResizableHandle withHandle />
+
+      <ResizablePanel defaultSize="78" minSize="40" className="min-h-0">
+        <ResizablePanelGroup orientation="vertical">
+          <ResizablePanel defaultSize="65" minSize="20" className="min-h-0">
+            {codePanel}
+          </ResizablePanel>
+
+          <ResizableHandle withHandle />
+
+          <ResizablePanel defaultSize="35" minSize="15" className="min-h-0">
+            {outputPanel}
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </ResizablePanel>
+    </ResizablePanelGroup>
+  )
+
+  const mobileLayout = (
+    <Tabs defaultValue="editor" className="flex h-full flex-col gap-2">
+      <TabsList className="w-full">
+        <TabsTrigger value="steps">
+          <ListChecks />
+          Steps
+        </TabsTrigger>
+        <TabsTrigger value="editor">
+          <FileCode />
+          Editor
+        </TabsTrigger>
+        <TabsTrigger value="output">
+          <Terminal />
+          Output
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="steps" className="min-h-0 flex-1">
+        {stepsPanel}
+      </TabsContent>
+
+      <TabsContent value="editor" className="min-h-0 flex-1">
+        {codePanel}
+      </TabsContent>
+
+      <TabsContent value="output" className="min-h-0 flex-1">
+        {outputPanel}
+      </TabsContent>
+    </Tabs>
+  )
+
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden">
+      <LabTopBar
+        lab={lab}
+        sessionCompleted={sessionCompleted}
+        canComplete={!sessionCompleted}
+        progress={progress}
+        currentStep={currentStepNumber}
+        totalSteps={lab.steps.length}
+        restartOpen={restartOpen}
+        onRestartOpenChange={setRestartOpen}
+        onComplete={handleComplete}
+        onRestart={handleRestart}
+      />
+
+      <main className="lab-theme min-h-0 flex-1 bg-background p-3 pt-0 lg:p-4 lg:pt-0">
+        {isDesktop ? desktopLayout : mobileLayout}
+      </main>
+    </div>
+  )
+}
