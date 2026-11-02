@@ -159,6 +159,15 @@ ouvre l'URL est redirigé vers `/dashboard`.
 Statuts : `draft` (brouillon) → `review` (en attente de validation) → `published` (visible au catalogue).
 Le formulaire du cours contient aussi *Prerequisites* et *Who is this course for?* (affichés sur la
 page du cours).
+**Import / export (admins)** : boutons *Export Excel*, *Export CSV*, *Import* de la liste
+(`components/dashboard/manage/CourseTransfer.tsx`). Export = route `GET /api/courses/export?format=xlsx|csv`
+(Excel : une feuille par table ; CSV : `.zip` d'un `<table>.csv` par table) ; import = `importCoursesAction`
+(`actions/courseTransfer.ts`, accepte `.xlsx`, `.zip` ou un `.csv` seul nommé d'après sa table).
+Tables : cours (+ tags), modules, leçons (+ vidéo), highlights, learning points, outcomes, ressources,
+codes promo. Colonnes : `lib/courseSpreadsheet.ts` ; logique : `lib/courseTransfer.ts`.
+Une ligne dont l'`id` (le `slug` pour un cours) existe est mise à jour, sinon créée ; une colonne absente
+n'efface rien ; **rien n'est supprimé**. Références par `course_slug`, et id ou titre pour module / leçon.
+Le fichier d'une ressource ne s'importe pas (seulement `external_url`).
 Écrans : liste (`page.tsx`), création (`new/page.tsx`, redirige vers l'éditeur), éditeur
 (`[slug]/page.tsx` = `CourseForm` + `CurriculumEditor`). Un cours déjà commandé ne peut pas être
 supprimé (409) : le passer en brouillon.

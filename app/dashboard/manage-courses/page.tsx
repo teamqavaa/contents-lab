@@ -5,6 +5,7 @@ import { Plus, Search } from 'lucide-react';
 import { getManagedCourses } from '@/actions/manageCourses';
 import { getConnectedUser } from '@/actions/user';
 import CourseActions from '@/components/dashboard/manage/CourseActions';
+import CourseTransfer from '@/components/dashboard/manage/CourseTransfer';
 import StatusBadge from '@/components/dashboard/manage/StatusBadge';
 import { plural, timeAgo } from '@/lib/format';
 import { canManageCourses, isAdmin } from '@/lib/roles';
@@ -48,12 +49,15 @@ export default async function ManageCoursesPage({
               : 'Your courses. Submit a course for review when it is ready: an administrator will publish it.'}
           </p>
         </div>
-        <Link
-          href="/dashboard/manage-courses/new"
-          className="btn btn-primary"
-        >
-          <Plus className="w-4 h-4" /> Add course
-        </Link>
+        <div className="flex flex-col gap-2 md:flex-row md:items-start">
+          {admin && <CourseTransfer />}
+          <Link
+            href="/dashboard/manage-courses/new"
+            className="btn btn-primary"
+          >
+            <Plus className="w-4 h-4" /> Add course
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

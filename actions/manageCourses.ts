@@ -1,11 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import type { CatalogCourse } from '@/actions/catalog';
-import { COURSES_API_URL } from '@/lib/coursesApi';
+import { apiCall, readErrors } from '@/lib/manageApi';
 
 // ---- Gestion des cours (instructeurs : leurs cours ; administrateurs : tous) ----
 // Les droits sont vérifiés par courses-api (core/permissions.py) : le front ne fait que masquer
@@ -41,41 +40,6 @@ export interface ActionResult {
 }
 
 const MANAGE_PATH = '/dashboard/manage-courses';
-
-async function token(): Promise<string | undefined> {
-  return (await cookies()).get('access_token')?.value;
-}
-
-/** Transforme une réponse d'erreur DRF ({detail} ou {champ: [messages]}) en message lisible. */
-function readErrors(data: unknown): Pick<ActionResult, 'message' | 'errors'> {
-  if (!data || typeof data !== 'object') return { message: 'The request failed, please try again.' };
-  const record = data as Record<string, unknown>;
-  if (typeof record.detail === 'string') return { message: record.detail };
-
-  const errors: Record<string, string> = {};
-  for (const [field, value] of Object.entries(record)) {
-    errors[field] = Array.isArray(value) ? String(value[0]) : String(value);
-  }
-  const first = Object.entries(errors)[0];
-  return { message: first ? `${first[0]}: ${first[1]}` : 'Invalid data.', errors };
-}
-
-async function apiCall(path: string, init: RequestInit = {}): Promise<{ ok: boolean; status: number; data: unknown }> {
-  const access = await token();
-  if (!access) return { ok: false, status: 401, data: { detail: 'Your session has expired, please sign in again.' } };
-
-  const headers: Record<string, string> = { Authorization: `Bearer ${access}` };
-  if (init.body && !(init.body instanceof FormData)) headers['Content-Type'] = 'application/json';
-
-  try {
-    const res = await fetch(`${COURSES_API_URL}${path}`, { ...init, headers, cache: 'no-store' });
-    const data = res.status === 204 ? null : await res.json().catch(() => null);
-    return { ok: res.ok, status: res.status, data };
-  } catch (error) {
-    console.error(`courses-api ${path} injoignable :`, error);
-    return { ok: false, status: 503, data: { detail: 'The courses service is unreachable.' } };
-  }
-}
 
 function result(response: { ok: boolean; data: unknown }, success: string): ActionResult {
   return response.ok ? { ok: true, message: success } : { ok: false, ...readErrors(response.data) };
