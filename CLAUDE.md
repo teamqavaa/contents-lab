@@ -113,6 +113,13 @@ Un brouillon reste visible par son auteur et les admins, avec un badge *Draft ·
 
 - **Visiteur** : `Banner.tsx` (titre, CTA *Start Learning* / *Explore Career Tracks*, photo et badges).
   Nombre de cours, d'apprenants (`total_students`) et de catégories : `getPublishedCourses()`.
+  `Home.tsx` charge une seule fois `getPublishedCourses()` + `getLabs()` pour les sections suivantes :
+  - `PracticeLabSection.tsx` (*Learn it. Practise it.*) : aperçu construit depuis un lab publié
+    (`GET /api/labs/`, étapes + code de départ) ; sans lab, depuis les leçons du career track qui en a le plus.
+  - `CareerPathsSection.tsx` (*Explore Career Paths*) : cours publiés regroupés par catégorie (3 premières),
+    nombre de cours, titres, modules/durée, tags (`tags_details`) ; lien vers le learning path (1 cours)
+    ou `/career-tracks?category=<catégorie>` (filtre présélectionné).
+  - `ReadyToLearnSection.tsx` : CTA final, nombre de cours et de catégories.
 - **Connecté** : `LearningHome.tsx` (maquette « Trenning » adaptée) :
 
 | Bloc | Donnée |

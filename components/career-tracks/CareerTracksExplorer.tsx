@@ -39,10 +39,13 @@ export default function CareerTracksExplorer({
   tracks,
   initialQuery = '',
   initialMatches = null,
+  initialCategory = '',
 }: {
   tracks: TrackSummary[];
   initialQuery?: string;
   initialMatches?: string[] | null;
+  /** ?category= : catégorie présélectionnée (cartes « Explore Career Paths » de l'accueil) */
+  initialCategory?: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [matches, setMatches] = useState<Set<string> | null>(initialMatches ? new Set(initialMatches) : null);
@@ -50,7 +53,7 @@ export default function CareerTracksExplorer({
   const lastSearched = useRef(initialMatches ? initialQuery.trim() : '');
   const [types, setTypes] = useState<string[]>([]);
   const [levels, setLevels] = useState<string[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<string[]>(initialCategory ? [initialCategory] : []);
 
   const levelOptions = useMemo(
     () => [...new Set(tracks.map((t) => t.level))].sort((a, b) => LEVEL_ORDER.indexOf(a) - LEVEL_ORDER.indexOf(b)),

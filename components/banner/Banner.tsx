@@ -39,7 +39,7 @@ export default async function Banner() {
             </span>
             <span className="text-[#2f5d50]">through</span>
             <br />
-            <span className="text-orange-400"> learning</span>  and
+            <span className="text-orange-400"> learning and</span>
             <br />
             hands-on practice.
             <span className="relative ml-4 inline-block h-[0.85em] w-[1.9em] overflow-hidden rounded-full align-[-0.05em] ring-4 ring-lime-200">

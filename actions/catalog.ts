@@ -34,6 +34,12 @@ export interface CatalogModule {
   lessons: CatalogLesson[];
 }
 
+export interface CatalogTag {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface CatalogCourse {
   id: string;
   slug: string;
@@ -56,6 +62,7 @@ export interface CatalogCourse {
   prerequisites: string;
   target_audience: string;
   category_details: CatalogCategory | null;
+  tags_details?: CatalogTag[];
   modules: CatalogModule[];
   created_at: string;
   updated_at: string;

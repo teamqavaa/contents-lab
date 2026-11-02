@@ -12,11 +12,14 @@ export const metadata: Metadata = {
   title: 'Career tracks · Ignite',
 };
 
-type Props = { searchParams: Promise<{ q?: string }> };
+type Props = { searchParams: Promise<{ q?: string; category?: string }> };
 
 export default async function CareerTracksPage({ searchParams }: Props) {
   // ?q= : recherche du header (ou lien partagé), résolue par l'API de recherche de courses-api
-  const query = ((await searchParams).q ?? '').trim();
+  const params = await searchParams;
+  const query = (params.q ?? '').trim();
+  // ?category= : filtre de catégorie présélectionné (accueil)
+  const category = (params.category ?? '').trim();
   const [courses, search] = await Promise.all([
     getPublishedCourses(),
     query.length >= 2 ? searchCourses(query, 50) : Promise.resolve(null),
@@ -51,10 +54,11 @@ export default async function CareerTracksPage({ searchParams }: Props) {
         </header>
         {/* key : une nouvelle recherche depuis le header réinitialise les filtres */}
         <CareerTracksExplorer
-          key={query}
+          key={`${query}|${category}`}
           tracks={tracks}
           initialQuery={query}
           initialMatches={search ? search.results.map((result) => result.id) : null}
+          initialCategory={category}
         />
       </div>
     </main>

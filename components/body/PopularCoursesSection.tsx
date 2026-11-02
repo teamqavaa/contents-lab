@@ -6,8 +6,8 @@ export default function PopularCoursesSection() {
       <div className="max-w-7xl mx-auto">
         {/* En-tête de la section */}
         <SectionHeader
-          subtitle="TRY BEFORE YOU COMMIT"
-          title="Popular Courses"
+          subtitle="Find courses by subject and choose what you want to learn."
+          title="Explore Courses "
           linkText="Browse all courses"
           linkHref="/courses"
         />
