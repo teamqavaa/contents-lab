@@ -33,13 +33,13 @@ export default async function Banner() {
           </span>
 
           <h1 className="mt-7 text-[44px] font-extrabold leading-[1.05] tracking-tight text-neutral-900 sm:text-6xl lg:text-[68px]">
-            Build
+            Build Skills
             <span className="mx-3 inline-flex h-[0.9em] w-[0.9em] -rotate-6 items-center justify-center rounded-xl bg-neutral-900 align-[-0.08em] text-white">
               <Zap className="h-[0.55em] w-[0.55em] fill-current" aria-hidden="true" />
             </span>
-            <span className="text-[#2f5d50]">Skills</span>
+            <span className="text-[#2f5d50]">through</span>
             <br />
-            <span className="text-orange-400">through </span> learning and
+            <span className="text-orange-400"> learning</span>  and
             <br />
             hands-on practice.
             <span className="relative ml-4 inline-block h-[0.85em] w-[1.9em] overflow-hidden rounded-full align-[-0.05em] ring-4 ring-lime-200">
@@ -67,28 +67,7 @@ export default async function Banner() {
             </Link>
           </div>
 
-          {courses.length > 0 && (
-            <div className="mt-11 flex items-center gap-4">
-              <div className="flex -space-x-3">
-                {AVATARS.map((src) => (
-                  <span key={src} className="relative h-12 w-12 overflow-hidden rounded-full border-[3px] border-white">
-                    <Image src={src} alt="" fill sizes="48px" className="object-cover" />
-                  </span>
-                ))}
-              </div>
-              <p className="text-lg text-neutral-800">
-                {students > 0 ? (
-                  <>
-                    <strong className="text-2xl font-bold">{compact(students)}+</strong> students enrolled
-                  </>
-                ) : (
-                  <>
-                    <strong className="text-2xl font-bold">{courses.length}</strong> courses available
-                  </>
-                )}
-              </p>
-            </div>
-          )}
+
         </div>
 
         {/* Visuel */}
