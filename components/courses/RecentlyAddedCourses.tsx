@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { getRecentCourses } from '@/actions/courses';
 import CourseCard, { CourseItem } from './pages/CourseCard';
 
-// Les 3 derniers cours publiés, affichés avec les mêmes cartes que la grille « Top Rated »
+// Les 4 derniers cours publiés, affichés avec les mêmes cartes que la grille « Top Rated »
 export default function RecentlyAddedCourses() {
   const [courses, setCourses] = useState<CourseItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +13,7 @@ export default function RecentlyAddedCourses() {
     async function fetchData() {
       try {
         setIsLoading(true);
-        const data = await getRecentCourses(3);
+        const data = await getRecentCourses(4);
 
         const formattedCourses: CourseItem[] = data.map((item) => ({
           id: item.id,
@@ -57,16 +57,16 @@ export default function RecentlyAddedCourses() {
   }
 
   return (
-    <section className="w-full bg-[#f8fafc] py-8 px-4 sm:px-6 lg:px-8">
+    <section className="w-full bg-[#f8fafc] pb-6 px-4 sm:px-6 lg:px-12">
       <div className="max-w-7xl mx-auto flex flex-col gap-4">
-        <h2 className="text-xl sm:text-2xl font-bold text-[#0f172a] tracking-tight">
+        <h2 className="text-xl font-bold text-neutral-900">
           Recently added
         </h2>
 
         {isLoading ? (
           <div className="p-8 text-center text-neutral-500 text-sm">Loading...</div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {courses.map((course) => (
               <CourseCard key={course.id} course={course} onToggleFavorite={handleToggleFavorite} />
             ))}

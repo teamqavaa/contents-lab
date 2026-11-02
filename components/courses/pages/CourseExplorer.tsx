@@ -108,7 +108,7 @@ export default function CourseExplorer() {
   };
 
   return (
-    <div className="w-full bg-[#f8fafc] min-h-screen pt-14 pb-8 px-4 sm:px-6 lg:px-12">
+    <div className="w-full bg-[#f8fafc] min-h-screen pt-8 pb-8 px-4 sm:px-6 lg:px-12">
       <div className="max-w-7xl mx-auto flex flex-col gap-8">
 
         {/* Navigation par Onglets Supérieurs */}
