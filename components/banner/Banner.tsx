@@ -29,7 +29,7 @@ export default async function Banner() {
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-lime-300 text-neutral-900">
               <Sparkles className="h-4 w-4" aria-hidden="true" />
             </span>
-            Online courses for every level &amp; goal
+            Learn. Practice. Grow.
           </span>
 
           <h1 className="mt-7 text-[44px] font-extrabold leading-[1.05] tracking-tight text-neutral-900 sm:text-6xl lg:text-[68px]">
@@ -39,9 +39,9 @@ export default async function Banner() {
             </span>
             <span className="text-[#2f5d50]">Skills</span>
             <br />
-            <span className="text-orange-400">Online</span> with Real
+            <span className="text-orange-400">through </span> learning and
             <br />
-            Experts
+            hands-on practice.
             <span className="relative ml-4 inline-block h-[0.85em] w-[1.9em] overflow-hidden rounded-full align-[-0.05em] ring-4 ring-lime-200">
               <Image src="/ceo.jpg" alt="" fill sizes="140px" className="object-cover" />
             </span>
@@ -57,13 +57,13 @@ export default async function Banner() {
               href="/courses"
               className="btn btn-dark btn-lg shadow-lg shadow-neutral-900/20"
             >
-              Start Learning <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              Explore Courses <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Link>
             <Link
               href="/career-tracks"
               className="btn btn-secondary btn-lg"
             >
-              Explore Career Tracks
+              Explore Learning Paths
             </Link>
           </div>
 
