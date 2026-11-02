@@ -71,7 +71,23 @@ export interface CourseWithEnrollment extends Course {
   isEnrolled: boolean;
 }
 
+// Cours triés par nombre d'apprenants (les plus populaires d'abord)
 export async function getPopularCourses(limit?: number): Promise<CourseWithEnrollment[]> {
+  return fetchSortedCourses((a, b) => b.total_students - a.total_students, limit);
+}
+
+// Cours triés par date de création (les plus récents d'abord)
+export async function getRecentCourses(limit?: number): Promise<CourseWithEnrollment[]> {
+  return fetchSortedCourses(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    limit,
+  );
+}
+
+async function fetchSortedCourses(
+  compare: (a: ApiCourse, b: ApiCourse) => number,
+  limit?: number,
+): Promise<CourseWithEnrollment[]> {
   try {
     const [response, enrolledCourses] = await Promise.all([
       fetch('https://contents-lab-api-5jbnazjbya-ew.a.run.app/api/courses/', {
@@ -92,7 +108,7 @@ export async function getPopularCourses(limit?: number): Promise<CourseWithEnrol
       enrollmentsList.map((course: any) => course.id || course.course_id || course.course?.id)
     );
 
-    const sortedCourses = apiCourses.sort((a, b) => b.total_students - a.total_students);
+    const sortedCourses = apiCourses.sort(compare);
     const coursesToReturn = limit ? sortedCourses.slice(0, limit) : sortedCourses;
 
     return coursesToReturn.map((course) => {

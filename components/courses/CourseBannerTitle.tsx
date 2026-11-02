@@ -6,12 +6,12 @@ export default function CourseBannerTitle() {
 
         {/* Titre responsive */}
         <h1 className="text-3xl sm:text-4xl lg:text-3xl font-extrabold text-[#0f172a] tracking-tight leading-tight">
-          AI courses
+          Find your next course.
         </h1>
 
         {/* Sous-titre avec largeur contrôlée pour une meilleure lisibilité */}
         <p className="text-neutral-600 text-base  font-normal leading-relaxed max-w-3xl">
-          Grow your AI career with foundational specializations and skill-specific short courses taught by leaders in the field.
+          Explore courses, build practical skills, and learn at your own pace.
         </p>
 
       </div>

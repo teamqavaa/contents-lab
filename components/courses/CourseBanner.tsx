@@ -1,12 +1,12 @@
 import CourseBannerTitle from "./CourseBannerTitle";
-import MostPopularCard from "./MostPopularCard";
+import RecentlyAddedCourses from "./RecentlyAddedCourses";
 import CourseExplorer from "./pages/CourseExplorer";
 
 export default function CourseBanner(){
     return (
         <>
             <CourseBannerTitle/>
-            <MostPopularCard/>
+            <RecentlyAddedCourses/>
             <CourseExplorer/>
         </>
     )
