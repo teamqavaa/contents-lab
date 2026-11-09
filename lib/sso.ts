@@ -74,10 +74,14 @@ export const PKCE_COOKIES = {
 
 /** N'accepte que des chemins internes ("/x"), jamais "//domaine" ni une URL absolue. */
 export function safeInternalPath(path: string | null | undefined, fallback = "/dashboard"): string {
-  if (!path || !path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) {
+  if (!path || !path.startsWith("/")) return fallback;
+  // Même analyse que le navigateur : "//x", "/\x" ou "/<tabulation>/x" sortiraient du site
+  const base = "http://internal.invalid";
+  try {
+    return new URL(path, base).origin === base ? path : fallback;
+  } catch {
     return fallback;
   }
-  return path;
 }
 
 // Cookies de session de l'application (posés par le callback)

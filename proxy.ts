@@ -8,6 +8,7 @@ import {
   SESSION_CHECK_SECONDS,
   SESSION_COOKIES,
   isAccessTokenValid,
+  safeInternalPath,
 } from '@/lib/sso';
 
 // 🟢 Define routes or prefixes that REQUIRE authentication
@@ -68,7 +69,8 @@ export default async function proxy(request: NextRequest) {
 
   // 🟢 CASE 2: Already logged in and visiting the root "/" or login with a "redirect" parameter
   if ((pathname === '/' || pathname === '/login') && token && searchParams.has('redirect')) {
-    const redirectTo = searchParams.get('redirect') || '/dashboard';
+    // Chemin interne uniquement : le navigateur reste sur le domaine visité (live ou test)
+    const redirectTo = safeInternalPath(searchParams.get('redirect'));
     return withSessionCookies(NextResponse.redirect(new URL(redirectTo, request.url)));
   }
 

@@ -33,16 +33,26 @@ export default function CourseCard({ course, initialInCart, progress }: CourseCa
     originalPrice,
   } = course;
 
+  // Accueil : image, titre et bouton Details mènent au career track (mêmes liens que les cartes de Browse Courses)
+  const careerPath = `/career-tracks/${course.slug}`;
+  const cover = (
+    <Image
+      src={image || '/career.jpg'}
+      alt={title}
+      fill
+      className={`object-cover ${progress ? '' : 'group-hover:scale-105 transition-transform duration-300'}`}
+      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
+    />
+  );
+
   return (
-    <div className="flex flex-col bg-white rounded-3xl shadow-sm border border-neutral-100 hover:shadow-md transition-shadow overflow-hidden h-full">
-      <div className="relative w-full aspect-[16/10] bg-neutral-100">
-        <Image
-          src={image || '/career.jpg'}
-          alt={title}
-          fill
-          className="object-cover"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
-        />
+    <div className="group flex flex-col bg-white rounded-3xl shadow-sm border border-neutral-100 hover:shadow-md transition-shadow overflow-hidden h-full">
+      <div className="relative w-full aspect-[16/10] bg-neutral-100 overflow-hidden">
+        {progress ? cover : (
+          <Link href={careerPath} className="block relative w-full h-full">
+            {cover}
+          </Link>
+        )}
         {progress?.category && (
           <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#6d5deb]">
             {progress.category}
@@ -78,7 +88,7 @@ export default function CourseCard({ course, initialInCart, progress }: CourseCa
           {progress ? (
             title
           ) : (
-            <Link href={`/career-tracks/${course.slug}`} className="hover:underline underline-offset-4">
+            <Link href={careerPath} className="hover:text-blue-600 transition-colors">
               {title}
             </Link>
           )}
@@ -121,7 +131,7 @@ export default function CourseCard({ course, initialInCart, progress }: CourseCa
             </Link>
           </div>
         ) : (
-          <div className="mt-auto pt-3 border-t border-neutral-100 flex items-center justify-between gap-3">
+          <div className="mt-auto pt-3 border-t border-neutral-100 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-col">
               <span className="text-lg font-extrabold text-neutral-900 leading-none">
                 ${price.toFixed(2)} <span className="text-[10px] font-semibold text-neutral-500">USD</span>
@@ -133,7 +143,12 @@ export default function CourseCard({ course, initialInCart, progress }: CourseCa
               )}
             </div>
 
-            <AddToCartButton courseId={id} initialInCart={initialInCart} courseSlug={course.slug} />
+            <div className="flex items-center gap-2">
+              <AddToCartButton courseId={id} initialInCart={initialInCart} courseSlug={course.slug} />
+              <Link href={careerPath} className="btn btn-secondary btn-sm">
+                Details
+              </Link>
+            </div>
           </div>
         )}
       </div>

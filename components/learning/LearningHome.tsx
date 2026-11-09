@@ -40,7 +40,7 @@ function Thumbnail({ src, className = '' }: { src?: string | null; className?: s
     <div className={`overflow-hidden bg-gradient-to-br from-[#ece9fd] to-sky-100 ${className}`}>
       {src && (
         // eslint-disable-next-line @next/next/no-img-element -- miniatures servies par courses-api (domaines variables)
-        <img src={src} alt="" className="h-full w-full object-cover" />
+        <img src={src} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
       )}
     </div>
   );
@@ -155,7 +155,7 @@ export default function LearningHome({ user, enrollments, stats, catalog, labsCo
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-md bg-emerald-500 px-3 py-1 text-sm font-medium text-white">New</span>
               <h2 className="font-bold text-neutral-900">
-                <Link href={`/career-tracks/${latest.slug}`} className="hover:underline underline-offset-4">
+                <Link href={`/career-tracks/${latest.slug}`} className="hover:text-blue-600 transition-colors">
                   {latest.title}
                 </Link>
               </h2>
@@ -167,7 +167,7 @@ export default function LearningHome({ user, enrollments, stats, catalog, labsCo
                   {' '}— new in <strong>&ldquo;{latest.category_details.name}&rdquo;</strong>.
                 </>
               )}{' '}
-              <Link href={`/courses/${latest.slug}`} className="inline-flex items-center gap-1 font-medium text-neutral-900 underline underline-offset-4">
+              <Link href={`/career-tracks/${latest.slug}`} className="inline-flex items-center gap-1 font-medium text-neutral-900 underline underline-offset-4">
                 Go to detail <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
             </p>
@@ -193,8 +193,14 @@ export default function LearningHome({ user, enrollments, stats, catalog, labsCo
                   {inProgress.map((enrollment) => {
                     const started = enrollment.completed_lessons > 0;
                     return (
-                      <li key={enrollment.id} className="flex flex-col gap-4 p-3 sm:flex-row sm:items-center">
-                        <Thumbnail src={enrollment.course.thumbnail} className="h-20 w-full shrink-0 rounded-xl sm:w-28" />
+                      <li key={enrollment.id} className="group flex flex-col gap-4 p-3 sm:flex-row sm:items-center">
+                        <Link
+                          href={`/career-tracks/${enrollment.course.slug}`}
+                          aria-label={enrollment.course.title}
+                          className="block w-full shrink-0 sm:w-28"
+                        >
+                          <Thumbnail src={enrollment.course.thumbnail} className="h-20 rounded-xl" />
+                        </Link>
                         <div className="min-w-0 flex-1">
                           <p className="flex items-center gap-1.5 text-xs text-neutral-500">
                             <span className="flex h-4 w-4 items-center justify-center rounded bg-sky-500 text-white">
@@ -203,7 +209,7 @@ export default function LearningHome({ user, enrollments, stats, catalog, labsCo
                             {enrollment.course.category?.name || 'Course'}
                           </p>
                           <p className="mt-1 truncate font-semibold text-neutral-900">
-                            <Link href={`/career-tracks/${enrollment.course.slug}`} className="hover:underline underline-offset-4">
+                            <Link href={`/career-tracks/${enrollment.course.slug}`} className="hover:text-blue-600 transition-colors">
                               {enrollment.course.title}
                             </Link>
                           </p>
@@ -261,35 +267,36 @@ export default function LearningHome({ user, enrollments, stats, catalog, labsCo
                 <ul className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                   {newCourses.map((course) => {
                     const totals = courseTotals(course);
+                    const careerPath = `/career-tracks/${course.slug}`;
                     return (
-                      <li key={course.id}>
-                        <Link
-                          href={`/career-tracks/${course.slug}`}
-                          className="flex h-full flex-col rounded-2xl border border-neutral-200 p-1.5 transition-shadow hover:shadow-md"
-                        >
-                          <div className="relative">
-                            <Thumbnail src={course.thumbnail} className="h-36 rounded-xl" />
-                            <span className="absolute left-2 top-2 rounded-md bg-neutral-900/80 px-2 py-0.5 text-xs text-white">
-                              {plural(totals.lessons, 'lesson')}
-                            </span>
-                          </div>
-                          <div className="flex flex-1 flex-col p-3">
-                            <p className="flex items-center gap-1.5 text-xs text-neutral-500">
-                              <span className="flex h-4 w-4 items-center justify-center rounded bg-sky-500 text-white">
-                                <BookOpen className="h-2.5 w-2.5" aria-hidden="true" />
-                              </span>
-                              {course.category_details?.name || 'Course'}
-                            </p>
-                            <p className="mt-2 line-clamp-2 font-semibold text-neutral-900">{course.title}</p>
-                            <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                              <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600">{capitalize(course.level)}</span>
-                              <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600">{capitalize(course.language)}</span>
-                              {totals.minutes > 0 && (
-                                <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600">{formatMinutes(totals.minutes)}</span>
-                              )}
-                            </div>
-                          </div>
+                      <li key={course.id} className="group flex h-full flex-col rounded-2xl border border-neutral-200 p-1.5 transition-shadow hover:shadow-md">
+                        <Link href={careerPath} aria-label={course.title} className="relative block">
+                          <Thumbnail src={course.thumbnail} className="h-36 rounded-xl" />
+                          <span className="absolute left-2 top-2 rounded-md bg-neutral-900/80 px-2 py-0.5 text-xs text-white">
+                            {plural(totals.lessons, 'lesson')}
+                          </span>
                         </Link>
+                        <div className="flex flex-1 flex-col p-3">
+                          <p className="flex items-center gap-1.5 text-xs text-neutral-500">
+                            <span className="flex h-4 w-4 items-center justify-center rounded bg-sky-500 text-white">
+                              <BookOpen className="h-2.5 w-2.5" aria-hidden="true" />
+                            </span>
+                            {course.category_details?.name || 'Course'}
+                          </p>
+                          <Link href={careerPath} className="mt-2">
+                            <p className="line-clamp-2 font-semibold text-neutral-900 transition-colors hover:text-blue-600">{course.title}</p>
+                          </Link>
+                          <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                            <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600">{capitalize(course.level)}</span>
+                            <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600">{capitalize(course.language)}</span>
+                            {totals.minutes > 0 && (
+                              <span className="rounded-full bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600">{formatMinutes(totals.minutes)}</span>
+                            )}
+                          </div>
+                          <Link href={careerPath} className="btn btn-secondary btn-sm mt-3 self-end">
+                            Details
+                          </Link>
+                        </div>
                       </li>
                     );
                   })}

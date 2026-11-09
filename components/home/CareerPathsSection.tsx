@@ -123,7 +123,7 @@ export default function CareerPathsSection({ courses }: { courses: CatalogCourse
                       {courseIndex > 0 && ', '}
                       <Link
                         href={`/career-tracks/${course.slug}`}
-                        className="underline decoration-neutral-300 underline-offset-2 hover:text-neutral-900 hover:decoration-neutral-900"
+                        className="underline decoration-neutral-300 underline-offset-2 hover:text-blue-600 transition-colors"
                       >
                         {course.title}
                       </Link>

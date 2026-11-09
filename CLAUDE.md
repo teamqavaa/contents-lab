@@ -227,7 +227,8 @@ un message, sans casser la page.
 - `components/courses/CourseCard.tsx` est le composant de la page d'accueil. Avec la prop
   `progress` (`percentage`, `completedLessons`, `totalLessons`, `href`, `category`), il affiche la
   catégorie, une barre de progression et un bouton *Start course / Continue / Watch again* à la
-  place du prix et du bouton panier. Sans `progress`, il est inchangé.
+  place du prix et du bouton panier. Sans `progress` (accueil), l'image, le titre et le bouton
+  *Details* mènent à `/career-tracks/<slug>`.
 - La progression est **enregistrée par le lecteur** `components/courses/CoursePlayerClient.tsx`
   (page `/course/<slug>/learn`, qui reçoit l'inscription via `getEnrollment(slug)`) :
   - ouverture d'une leçon → elle devient la « dernière leçon » (reprise depuis le dashboard) ;
