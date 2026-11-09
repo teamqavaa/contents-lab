@@ -47,10 +47,7 @@ export default async function Banner() {
             </span>
           </h1>
 
-          <p className="mt-7 max-w-xl text-lg leading-relaxed text-neutral-500">
-            Qavaa Innovate gives you a complete learning experience that helps you gain real, job-ready skills and
-            take the next step in your career.
-          </p>
+
 
           <div className="mt-9 flex flex-wrap gap-3">
             <Link
