@@ -1,6 +1,6 @@
 export default function CourseBannerTitle() {
   return (
-    <section className="w-full bg-[#f8fafc]  border-neutral-200/60 pt-20 sm:pt-24 pb-8 sm:pb-10 px-4 sm:px-6 lg:px-12">
+    <section className="w-full bg-[#f8fafc]  border-neutral-200/60 pt-24 sm:pt-24 pb-8 sm:pb-10 px-4 sm:px-6 lg:px-12">
       {/* Conteneur aligné avec le reste de la page */}
       <div className="max-w-7xl mx-auto flex flex-col gap-2 sm:gap-3 text-left">
 
