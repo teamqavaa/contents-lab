@@ -1,4 +1,5 @@
 // components/home/CareerPathsSection.tsx — « Explore Career Paths » : cours publiés regroupés par catégorie
+import { Fragment } from 'react';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -117,7 +118,17 @@ export default function CareerPathsSection({ courses }: { courses: CatalogCourse
 
                 <h3 className="mt-5 text-lg font-bold text-neutral-900">{path.category}</h3>
                 <p className="mt-1 line-clamp-2 text-sm text-neutral-500">
-                  {path.courses.map((course) => course.title).join(', ')}
+                  {path.courses.map((course, courseIndex) => (
+                    <Fragment key={course.id}>
+                      {courseIndex > 0 && ', '}
+                      <Link
+                        href={`/career-tracks/${course.slug}`}
+                        className="underline decoration-neutral-300 underline-offset-2 hover:text-neutral-900 hover:decoration-neutral-900"
+                      >
+                        {course.title}
+                      </Link>
+                    </Fragment>
+                  ))}
                 </p>
                 <p className="mt-2 text-xs font-medium text-neutral-400">
                   {plural(path.modules, 'module')}

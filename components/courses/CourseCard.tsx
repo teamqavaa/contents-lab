@@ -74,7 +74,14 @@ export default function CourseCard({ course, initialInCart, progress }: CourseCa
         </div>
 
         <h3 className="text-base font-bold text-neutral-900 mb-2 line-clamp-1">
-          {title}
+          {/* En mode progression (dashboard), le bouton mène déjà au lecteur */}
+          {progress ? (
+            title
+          ) : (
+            <Link href={`/career-tracks/${course.slug}`} className="hover:underline underline-offset-4">
+              {title}
+            </Link>
+          )}
         </h3>
 
         {description && (

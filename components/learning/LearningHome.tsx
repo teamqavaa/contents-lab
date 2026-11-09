@@ -154,7 +154,11 @@ export default function LearningHome({ user, enrollments, stats, catalog, labsCo
           <section className="rounded-2xl bg-emerald-50/70 px-5 py-4" aria-label="New on Ignite">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-md bg-emerald-500 px-3 py-1 text-sm font-medium text-white">New</span>
-              <h2 className="font-bold text-neutral-900">{latest.title}</h2>
+              <h2 className="font-bold text-neutral-900">
+                <Link href={`/career-tracks/${latest.slug}`} className="hover:underline underline-offset-4">
+                  {latest.title}
+                </Link>
+              </h2>
             </div>
             <p className="mt-2 text-sm text-neutral-700">
               {latest.subtitle || latest.description.slice(0, 140)}
@@ -198,7 +202,11 @@ export default function LearningHome({ user, enrollments, stats, catalog, labsCo
                             </span>
                             {enrollment.course.category?.name || 'Course'}
                           </p>
-                          <p className="mt-1 truncate font-semibold text-neutral-900">{enrollment.course.title}</p>
+                          <p className="mt-1 truncate font-semibold text-neutral-900">
+                            <Link href={`/career-tracks/${enrollment.course.slug}`} className="hover:underline underline-offset-4">
+                              {enrollment.course.title}
+                            </Link>
+                          </p>
                         </div>
                         <dl className="grid grid-cols-3 gap-4 text-sm sm:w-[340px]">
                           <div>
@@ -256,7 +264,7 @@ export default function LearningHome({ user, enrollments, stats, catalog, labsCo
                     return (
                       <li key={course.id}>
                         <Link
-                          href={`/courses/${course.slug}`}
+                          href={`/career-tracks/${course.slug}`}
                           className="flex h-full flex-col rounded-2xl border border-neutral-200 p-1.5 transition-shadow hover:shadow-md"
                         >
                           <div className="relative">
