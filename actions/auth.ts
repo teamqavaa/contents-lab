@@ -1,8 +1,8 @@
 'use server';
 
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
-import { APP_URL, SSO_FRONT_URL } from '@/lib/sso';
+import { SSO_FRONT_URL, getSsoClient } from '@/lib/sso';
 
 /**
  * Déconnexion globale : purge des cookies locaux puis redirection vers le front SSO, qui vide
@@ -19,7 +19,8 @@ export async function logoutAction(idToken?: string) {
   }
 
   const logoutUrl = new URL('/api/auth/logout', SSO_FRONT_URL);
-  logoutUrl.searchParams.set('post_logout_redirect_uri', `${APP_URL}/`);
+  const { appUrl } = getSsoClient(await headers());
+  logoutUrl.searchParams.set('post_logout_redirect_uri', `${appUrl}/`);
   if (idTokenHint) {
     logoutUrl.searchParams.set('id_token_hint', idTokenHint);
   }

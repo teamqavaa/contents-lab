@@ -6,9 +6,8 @@ import crypto from "crypto";
 import {
   PKCE_COOKIES,
   SECURE_COOKIES,
-  SSO_CLIENT_ID,
   SSO_FRONT_URL,
-  SSO_REDIRECT_URI,
+  getSsoClient,
   safeInternalPath,
 } from "@/lib/sso";
 
@@ -36,12 +35,13 @@ export async function GET(request: Request) {
   cookieStore.set(PKCE_COOKIES.redirectAfter, safeInternalPath(searchParams.get("redirect")), tmpCookie);
 
   // 3. Redirection vers la page de connexion du front SSO ("/" = seule route publique)
-  // La redirect_uri vient de la configuration : derrière Cloud Run, l'hôte de la requête
-  // vaut 0.0.0.0:8080 et ne correspondrait pas aux "Redirect uris" déclarées dans le SSO.
+  // Le client et la redirect_uri viennent de la configuration du domaine visité (lib/sso.ts) :
+  // ils doivent correspondre aux "Redirect uris" déclarées dans le SSO.
+  const ssoClient = getSsoClient(request.headers);
   const ssoUrl = new URL("/", SSO_FRONT_URL);
   ssoUrl.searchParams.set("mode", mode);
-  ssoUrl.searchParams.set("client_id", SSO_CLIENT_ID);
-  ssoUrl.searchParams.set("redirect_uri", SSO_REDIRECT_URI);
+  ssoUrl.searchParams.set("client_id", ssoClient.clientId);
+  ssoUrl.searchParams.set("redirect_uri", ssoClient.redirectUri);
   ssoUrl.searchParams.set("response_type", "code");
   ssoUrl.searchParams.set("state", state);
   ssoUrl.searchParams.set("code_challenge", challenge);

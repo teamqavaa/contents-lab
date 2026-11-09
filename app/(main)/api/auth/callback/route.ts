@@ -3,19 +3,12 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import {
-  APP_URL,
   PKCE_COOKIES,
   SECURE_COOKIES,
   SSO_API_URL,
-  SSO_CLIENT_ID,
-  SSO_CLIENT_SECRET,
-  SSO_REDIRECT_URI,
+  getSsoClient,
   safeInternalPath,
 } from "@/lib/sso";
-
-function redirectWithError(error: string) {
-  return NextResponse.redirect(`${APP_URL}/?error=${encodeURIComponent(error)}`);
-}
 
 /** Lit le payload d'un JWT (sans vérification : le token vient directement du SSO en HTTPS). */
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
@@ -27,6 +20,11 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 }
 
 export async function GET(request: Request) {
+  // Même application OAuth2 que celle choisie par /api/auth/login pour ce domaine
+  const ssoClient = getSsoClient(request.headers);
+  const redirectWithError = (error: string) =>
+    NextResponse.redirect(`${ssoClient.appUrl}/?error=${encodeURIComponent(error)}`);
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
@@ -51,15 +49,15 @@ export async function GET(request: Request) {
 
   const tokenParams = new URLSearchParams({
     grant_type: "authorization_code",
-    client_id: SSO_CLIENT_ID,
+    client_id: ssoClient.clientId,
     code,
-    redirect_uri: SSO_REDIRECT_URI,
+    redirect_uri: ssoClient.redirectUri,
   });
   if (codeVerifier) {
     tokenParams.append("code_verifier", codeVerifier);
   }
-  if (SSO_CLIENT_SECRET) {
-    tokenParams.append("client_secret", SSO_CLIENT_SECRET);
+  if (ssoClient.clientSecret) {
+    tokenParams.append("client_secret", ssoClient.clientSecret);
   }
 
   try {
@@ -108,7 +106,7 @@ export async function GET(request: Request) {
     // Nettoyage des cookies temporaires du flux PKCE
     Object.values(PKCE_COOKIES).forEach((name) => cookieStore.delete(name));
 
-    return NextResponse.redirect(`${APP_URL}${redirectAfter}`);
+    return NextResponse.redirect(`${ssoClient.appUrl}${redirectAfter}`);
   } catch (err) {
     console.error("Erreur réseau pendant le callback SSO :", err);
     return redirectWithError("server_error");

@@ -65,6 +65,9 @@ jobs:
             SSO_CLIENT_SECRET=${{ secrets.SSO_CLIENT_SECRET }}
             REDIRECT_URI=https://qi-front-app-l2tbnetuqa-ew.a.run.app/api/auth/callback
             NEXT_PUBLIC_SSO_URL=https://sso-front-mp3dhl7baq-ew.a.run.app
+            LIVE_SSO_CLIENT_ID=BNI3bFlQW3D3386zUDYDDfnqnlDAHRSHQMNTgi8o
+            LIVE_SSO_CLIENT_SECRET=${{ secrets.LIVE_SSO_CLIENT_SECRET }}
+            LIVE_REDIRECT_URI=https://learn2ignite.com/api/auth/callback
 
       - name: Show Service URL
         run: |

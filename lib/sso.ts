@@ -1,7 +1,7 @@
 // lib/sso.ts — configuration unique de la connexion au SSO Qavaa (côté serveur)
 // Voir le CLAUDE.md du SSO (§6) pour le détail du flux.
 
-export const APP_URL = (
+const APP_URL = (
   process.env.NEXT_PUBLIC_APP_URL || "https://qi-front-app-l2tbnetuqa-ew.a.run.app"
 ).replace(/\/$/, "");
 
@@ -15,19 +15,53 @@ export const SSO_API_URL = (
   process.env.NEXT_PUBLIC_SSO_API_URL || "https://qavaa-innovate-sso-zlvwvifuvq-ew.a.run.app"
 ).replace(/\/$/, "");
 
-export const SSO_CLIENT_ID =
-  process.env.SSO_CLIENT_ID ||
-  process.env.NEXT_PUBLIC_SSO_CLIENT_ID ||
-  "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX";
+// Application OAuth2 déclarée dans l'admin du SSO pour un domaine du site
+export interface SsoClient {
+  appUrl: string;
+  clientId: string;
+  // Optionnel : uniquement si l'application est "Confidential" dans l'admin du SSO
+  clientSecret: string;
+  // Doit être EXACTEMENT une des "Redirect uris" de l'application dans l'admin du SSO
+  redirectUri: string;
+}
 
-// Optionnel : uniquement si l'application est "Confidential" dans l'admin du SSO
-export const SSO_CLIENT_SECRET = process.env.SSO_CLIENT_SECRET || "";
+// Lien de test (Cloud Run) et tout autre domaine
+const DEFAULT_SSO_CLIENT: SsoClient = {
+  appUrl: APP_URL,
+  clientId:
+    process.env.SSO_CLIENT_ID ||
+    process.env.NEXT_PUBLIC_SSO_CLIENT_ID ||
+    "o22CDMr2DsKgTAtuB437S90eLvB1KgPUbBeRYsYX",
+  clientSecret: process.env.SSO_CLIENT_SECRET || "",
+  redirectUri:
+    process.env.REDIRECT_URI ||
+    process.env.NEXT_PUBLIC_SSO_REDIRECT_URI ||
+    `${APP_URL}/api/auth/callback`,
+};
 
-// Doit être EXACTEMENT une des "Redirect uris" de l'application dans l'admin du SSO
-export const SSO_REDIRECT_URI =
-  process.env.REDIRECT_URI ||
-  process.env.NEXT_PUBLIC_SSO_REDIRECT_URI ||
-  `${APP_URL}/api/auth/callback`;
+// Phase live. Variables serveur uniquement : jamais de préfixe NEXT_PUBLIC_ pour le secret.
+const LIVE_HOST = "learn2ignite.com";
+const LIVE_APP_URL = `https://${LIVE_HOST}`;
+const LIVE_SSO_CLIENT: SsoClient = {
+  appUrl: LIVE_APP_URL,
+  clientId: process.env.LIVE_SSO_CLIENT_ID || "",
+  clientSecret: process.env.LIVE_SSO_CLIENT_SECRET || "",
+  redirectUri: process.env.LIVE_REDIRECT_URI || `${LIVE_APP_URL}/api/auth/callback`,
+};
+
+/**
+ * Choisit l'application OAuth2 d'après le domaine de la requête. On lit les en-têtes et non
+ * request.url : derrière Cloud Run, l'hôte de request.url vaut 0.0.0.0:8080.
+ * Seule une égalité exacte avec le domaine live change la configuration.
+ */
+export function getSsoClient(requestHeaders: Pick<Headers, "get">): SsoClient {
+  const forwardedHost = requestHeaders.get("x-forwarded-host")?.split(",")[0];
+  const host = (forwardedHost || requestHeaders.get("host") || "")
+    .trim()
+    .toLowerCase()
+    .replace(/:\d+$/, "");
+  return host === LIVE_HOST ? LIVE_SSO_CLIENT : DEFAULT_SSO_CLIENT;
+}
 
 export const SECURE_COOKIES = process.env.NODE_ENV === "production";
 

@@ -10,7 +10,7 @@ les cours, paniers, commandes et la progression viennent de `courses-api`.
 
 | Fichier | Rôle |
 |---|---|
-| `lib/sso.ts` | URLs du SSO (`SSO_API_URL`, `SSO_FRONT_URL`), client OAuth2, cookies de session |
+| `lib/sso.ts` | URLs du SSO (`SSO_API_URL`, `SSO_FRONT_URL`), client OAuth2 selon le domaine (`getSsoClient` : `LIVE_SSO_CLIENT_ID`, `LIVE_SSO_CLIENT_SECRET`, `LIVE_REDIRECT_URI` sur `learn2ignite.com`, sinon les variables de test), cookies de session |
 | `lib/coursesApi.ts` | `COURSES_API_URL` (`COURSES_API_URL` ou `NEXT_PUBLIC_CART_API_URL`, défaut Cloud Run `contents-lab-api`) |
 | `proxy.ts` | routes protégées (`/dashboard`, `/course/`, …), vérification de session SSO toutes les 60 s |
 | `lib/roles.ts` | droits de l'utilisateur (admin, instructeur) |
