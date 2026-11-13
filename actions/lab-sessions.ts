@@ -189,7 +189,11 @@ export type GetLabResult =
 
 export async function getLab(labRef: string): Promise<GetLabResult> {
   try {
-    const res = await publicFetch(`/api/labs/${encodeURIComponent(labRef)}/`)
+    // Token envoyé s'il existe : l'auteur d'un brouillon et les admins peuvent l'ouvrir (aperçu)
+    const token = await accessToken()
+    const res = await publicFetch(`/api/labs/${encodeURIComponent(labRef)}/`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
     if (!res.ok) {
       return {
         ok: false,

@@ -22,3 +22,8 @@ export function isInstructor(user?: RoleHolder | null): boolean {
 export function canManageCourses(user?: RoleHolder | null): boolean {
   return isAdmin(user) || isInstructor(user);
 }
+
+/** Accès à l'onglet « Manage labs » : mêmes droits que les cours (courses-api revérifie tout). */
+export function canManageLabs(user?: RoleHolder | null): boolean {
+  return canManageCourses(user);
+}

@@ -38,6 +38,7 @@ npm run build                         # vérifie les types (à lancer avant chaq
 | Recherche du header | tout le monde | `components/search/SearchModal.tsx` → `/career-tracks?q=` |
 | `/dashboard…` | connecté | `app/dashboard/`, `components/dashboard/` |
 | `/dashboard/manage-courses…` | instructeur, admin | `app/dashboard/manage-courses/`, `components/dashboard/manage/`, `actions/manageCourses.ts` |
+| `/dashboard/manage-labs…` | instructeur (ses labs), admin (tous) | `app/dashboard/manage-labs/`, `LabForm.tsx`, `LabActions.tsx`, `actions/manageLabs.ts` |
 
 Règles à retenir :
 - **Toutes les données viennent des API** (SSO et courses-api) via les server actions de `actions/`.
@@ -171,6 +172,16 @@ Le fichier d'une ressource ne s'importe pas (seulement `external_url`).
 Écrans : liste (`page.tsx`), création (`new/page.tsx`, redirige vers l'éditeur), éditeur
 (`[slug]/page.tsx` = `CourseForm` + `CurriculumEditor`). Un cours déjà commandé ne peut pas être
 supprimé (409) : le passer en brouillon.
+
+## Gestion des labs (`/dashboard/manage-labs`)
+
+Onglet *Manage labs* visible si `canManageLabs(user)` (= `canManageCourses`). Admin (rôle admin /
+superadmin / superuser, `is_staff`, `is_superuser`) : tous les labs, publier / dépublier / supprimer.
+Instructeur : seulement ses labs, *Submit for review*. Étudiant : `/dashboard/labs` et `/labs/<slug>`
+(labs publiés). Formulaire : infos du lab, compétences (`GET /api/skills/`), étapes ordonnées
+(titre, consignes, indice, code de départ). *Preview* ouvre `/labs/<slug>` : `getLab` envoie le token,
+donc l'auteur et les admins voient un brouillon. `getLabs()` (accueil, *My Labs*) reste public :
+uniquement les labs publiés. Routes API : voir le `CLAUDE.md` de courses-api.
 
 ## Dashboard (`/dashboard`)
 
