@@ -12,9 +12,8 @@ import SearchTrigger from '@/components/search/SearchTrigger';
 import { useSessionUser } from '@/lib/useSessionUser';
 import { OnlineAvatar, signOut } from '../laptop/UserMenu';
 import {
-  ACCOUNT_LINKS,
   LOGIN_URL,
-  MANAGE_COURSES_LINK,
+  accountLinks as getAccountLinks,
   REGISTER_URL,
   SITE_LINKS,
   isSiteLinkActive,
@@ -26,7 +25,7 @@ export default function MobileHeaderBar() {
   const [signingOut, setSigningOut] = useState(false);
   const { authenticated, user } = useSessionUser();
   const close = () => setIsMenuOpen(false);
-  const accountLinks = user?.canManageCourses ? [...ACCOUNT_LINKS, MANAGE_COURSES_LINK] : ACCOUNT_LINKS;
+  const accountLinks = getAccountLinks(user?.canManageCourses);
 
   return (
     <>

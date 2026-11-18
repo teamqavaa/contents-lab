@@ -2,17 +2,19 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { BookOpen, ChevronDown, LayoutGrid, Loader2, LogOut, PenSquare, Settings } from 'lucide-react';
+import { BookOpen, ChevronDown, FlaskConical, FlaskRound, LayoutGrid, Loader2, LogOut, PenSquare, Settings } from 'lucide-react';
 
 import { logoutAction } from '@/actions/auth';
 import UserAvatar from '@/components/dashboard/UserAvatar';
 import { getFirstName } from '@/lib/initials';
 import type { SessionUser } from '@/lib/useSessionUser';
-import { ACCOUNT_LINKS, MANAGE_COURSES_LINK } from '../navigation';
+import { accountLinks } from '../navigation';
 
 const ICONS: Record<string, typeof LayoutGrid> = {
   '/dashboard': LayoutGrid,
   '/dashboard/courses': BookOpen,
+  '/dashboard/labs': FlaskConical,
+  '/dashboard/manage-labs': FlaskRound,
   '/dashboard/settings': Settings,
 };
 
@@ -47,7 +49,7 @@ export function OnlineAvatar({ user, size = 36 }: { user: SessionUser; size?: nu
   );
 }
 
-/** Menu de l'utilisateur connecté : nom, Dashboard, My courses, [Manage courses], Settings, Sign out. */
+/** Menu de l'utilisateur connecté : nom, Dashboard, My courses, My labs, [Manage courses, Manage labs], Settings, Sign out. */
 export default function UserMenu({ user }: { user: SessionUser }) {
   const [open, setOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -68,7 +70,7 @@ export default function UserMenu({ user }: { user: SessionUser }) {
     };
   }, [open]);
 
-  const links = user.canManageCourses ? [...ACCOUNT_LINKS.slice(0, 2), MANAGE_COURSES_LINK, ACCOUNT_LINKS[2]] : ACCOUNT_LINKS;
+  const links = accountLinks(user.canManageCourses);
 
   return (
     <div ref={ref} className="relative">

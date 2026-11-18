@@ -102,7 +102,8 @@ Un brouillon reste visible par son auteur et les admins, avec un badge *Draft ·
 - `laptop/Header.tsx` : logo Ignite à gauche, onglets dans une pilule au centre ; à droite,
   *Log In* / *Sign Up* pour un visiteur, **panier + `UserMenu`** pour un utilisateur connecté.
 - `laptop/UserMenu.tsx` : avatar (photo du profil SSO sinon initiales) avec **point vert « connecté »**,
-  prénom, menu *Dashboard*, *My courses*, *Manage courses* (si autorisé), *Settings*, *Sign out*
+  prénom, menu *Dashboard*, *My courses*, *My labs* (`/dashboard/labs`), *Manage courses* et *Manage labs*
+  (si autorisé), *Settings*, *Sign out* — liste unique : `accountLinks()` de `navigation.ts`
   (`signOut()` = déconnexion globale SSO).
 - `mobile/MobileHeaderBar.tsx` : même logique dans un menu plein écran.
 - La session côté client vient de `lib/useSessionUser.ts` → `GET /api/auth/me`
