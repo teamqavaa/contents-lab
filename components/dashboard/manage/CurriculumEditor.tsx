@@ -14,6 +14,8 @@ import {
 } from '@/actions/manageCourses';
 import { formatMinutes, plural } from '@/lib/format';
 import { inputClass } from './CourseForm';
+import LessonQuizButton from './LessonQuizButton';
+import LessonTypeFields from './LessonTypeFields';
 
 const smallButton = 'btn btn-secondary btn-sm';
 const primaryButton = 'btn btn-primary btn-sm';
@@ -71,6 +73,11 @@ export default function CurriculumEditor({ courseId, modules }: { courseId: stri
         is_published: formData.get('is_published') === 'on',
         video_url: String(formData.get('video_url') || ''),
         video_id: lesson?.video?.id ?? null,
+        // Champs de LessonTypeFields : envoyés seulement s'ils sont affichés (et le lab seulement s'il change)
+        content: formData.has('content') ? String(formData.get('content') || '') : undefined,
+        lab: formData.has('lab') && String(formData.get('lab') || '') !== (lesson?.lab ?? '')
+          ? String(formData.get('lab') || '') || null
+          : undefined,
       }),
     );
 
@@ -103,9 +110,11 @@ export default function CurriculumEditor({ courseId, modules }: { courseId: stri
           <option value="ARTICLE">Article</option>
           <option value="DOCUMENT">Document</option>
           <option value="QUIZ">Quiz</option>
+          <option value="LAB">Lab</option>
         </select>
         <input name="duration_in_minutes" type="number" min="0" placeholder="Minutes" defaultValue={lesson?.duration_in_minutes ?? ''} aria-label="Duration in minutes" className={inputClass} />
       </div>
+      <LessonTypeFields lesson={lesson} />
       <input name="video_url" type="url" placeholder="Video URL (YouTube, Vimeo…)" defaultValue={lesson?.video?.video_url ?? ''} aria-label="Video URL" className={inputClass} />
       <textarea name="description" rows={2} placeholder="Short summary" defaultValue={lesson?.description} aria-label="Lesson summary" className={inputClass} />
       <div className="flex flex-wrap gap-4 text-sm text-neutral-700">
@@ -196,8 +205,11 @@ export default function CurriculumEditor({ courseId, modules }: { courseId: stri
                             {!lesson.is_published && <span className="ml-2 text-xs text-neutral-400">(hidden)</span>}
                             {lesson.is_preview && <span className="ml-2 text-xs text-emerald-700">preview</span>}
                             {!lesson.video && lesson.lesson_type === 'VIDEO' && <span className="ml-2 text-xs text-amber-700">no video</span>}
+                            {lesson.lesson_type === 'LAB' && <span className="ml-2 text-xs text-[#4f3fd6]">lab{lesson.lab_details ? `: ${lesson.lab_details.title}` : ''}</span>}
+                            {lesson.lesson_type === 'QUIZ' && !lesson.quiz && <span className="ml-2 text-xs text-amber-700">no quiz</span>}
                           </span>
                           <span className="text-xs text-neutral-500">{formatMinutes(lesson.duration_in_minutes)}</span>
+                          {lesson.lesson_type === 'QUIZ' && <LessonQuizButton lesson={lesson} />}
                           <button type="button" className={smallButton} onClick={() => setEditing({ kind: 'lesson', moduleId: module.id, id: lesson.id })}>
                             <Pencil className="w-3.5 h-3.5" /> <span className="sr-only">Edit lesson</span>
                           </button>

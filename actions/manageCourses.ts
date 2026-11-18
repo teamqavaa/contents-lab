@@ -179,6 +179,9 @@ export interface LessonInput {
   /** URL de la vidéo (YouTube…) ; vide = pas de vidéo. */
   video_url: string;
   video_id?: string | null;
+  /** Champs envoyés seulement si le formulaire les affiche (selon le type de leçon) */
+  content?: string;
+  lab?: string | null;
 }
 
 /** Enregistre la leçon puis crée / met à jour / supprime sa vidéo (/api/videos/). */
@@ -212,4 +215,35 @@ export async function deleteLessonAction(id: string): Promise<ActionResult> {
   const response = await apiCall(`/api/lessons/${id}/`, { method: 'DELETE' });
   revalidatePath(MANAGE_PATH, 'layout');
   return result(response, 'Lesson deleted.');
+}
+
+// ---------------------------------------------------------------------------
+// Leçons LAB : labs pouvant être rattachés (publiés uniquement, règle de courses-api)
+// ---------------------------------------------------------------------------
+
+export interface LessonLabOption {
+  id: string;
+  slug: string;
+  title: string;
+  language: string;
+}
+
+/**
+ * Labs publiés proposés dans l'éditeur de leçon : ceux de /api/labs/manage/ (labs de l'instructeur,
+ * tous pour un admin) et ceux du catalogue /api/labs/ (labs publiés des autres auteurs).
+ */
+export async function getLessonLabOptions(): Promise<LessonLabOption[]> {
+  const [managed, catalog] = await Promise.all([
+    apiCall('/api/labs/manage/?status=published'),
+    apiCall('/api/labs/'),
+  ]);
+  const options = new Map<string, LessonLabOption>();
+  for (const response of [managed, catalog]) {
+    if (!response.ok || !Array.isArray(response.data)) continue;
+    for (const lab of response.data as (LessonLabOption & { status?: string })[]) {
+      if (lab.status && lab.status !== 'published') continue;
+      options.set(lab.id, { id: lab.id, slug: lab.slug, title: lab.title, language: lab.language });
+    }
+  }
+  return [...options.values()].sort((a, b) => a.title.localeCompare(b.title));
 }

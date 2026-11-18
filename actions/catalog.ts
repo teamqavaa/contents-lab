@@ -23,6 +23,13 @@ export interface CatalogLesson {
   is_preview: boolean;
   is_published: boolean;
   video: { id: string; title: string; provider: string; video_url: string } | null;
+  /** Corps d'une leçon ARTICLE / DOCUMENT */
+  content?: string;
+  /** Leçon LAB : id du lab et son résumé */
+  lab?: string | null;
+  lab_details?: { id: string; slug: string; title: string; language: string } | null;
+  /** Leçon QUIZ : id du quiz rattaché (facultatif) */
+  quiz?: string | null;
 }
 
 export interface CatalogModule {
