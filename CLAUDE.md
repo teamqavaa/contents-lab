@@ -249,6 +249,22 @@ un message, sans casser la page.
     (le lien *Continue* pointe vers `/course/<slug>/learn#<leçon>`).
 - Le pourcentage = leçons publiées terminées / leçons publiées du cours (calculé par courses-api).
 
+### Leçons texte, lab et quiz (lecteur `/course/<slug>/learn`)
+
+`CoursePlayerClient.tsx` choisit le panneau selon `lesson.lesson_type` (voir « Types de leçon » dans le
+`CLAUDE.md` de courses-api). Le panneau **remplace la zone vidéo** ; sinon le rendu vidéo d'origine est inchangé.
+
+| Leçon | Panneau (`components/courses/lessons/`) | *Mark as complete* |
+|---|---|---|
+| `LAB` | `LabLesson.tsx` : lien *Open the lab* → `/labs/<slug>?course=<slug du cours>&lesson=<id>` ; la page du lab affiche alors un bouton fixe *Back to lesson* (`app/labs/[labSlug]/page.tsx`, paramètres validés) | masqué : la leçon se termine quand le lab est réussi (courses-api, signal `activity_completed`) ; la progression est relue au retour dans le lecteur |
+| `QUIZ` **avec** `quiz` | `QuizLesson.tsx` : intro (tentatives, meilleur score), questions (radio, cases, texte, éditeur CodeMirror `components/lab/code-editor.tsx` pour le code), minuteur et soumission automatique si `time_limit_min`, résultat avec corrections et explications, *Try again* si des tentatives restent, *Next lesson* après réussite | masqué ; à la réussite, `onPassed` relit l'inscription (`getEnrollment`) |
+| `ARTICLE` / `DOCUMENT` **avec** `content` | `TextLesson.tsx` (texte affiché tel quel, `whitespace-pre-wrap`) | affiché |
+| autres (dont `QUIZ` sans quiz et texte vide : toutes les leçons existantes) | zone vidéo d'origine | affiché |
+
+Server actions des quiz : `actions/quizzes.ts` → `getQuiz`, `startQuizAttempt`, `submitQuizAttempt`,
+`getQuizAttempt` (cookie `access_token`, identifiants validés en UUID ; jamais de bonne réponse avant correction).
+Tests : `components/courses/CoursePlayerClient.test.tsx`, `components/courses/lessons/QuizLesson.test.tsx`.
+
 ### Couleurs
 
 Accent du dashboard : `#6d5deb` (fond clair `#ece9fd`, texte `#4f3fd6`), fond de page `#f5f5fa`.
