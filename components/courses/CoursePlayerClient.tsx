@@ -8,6 +8,11 @@ import {
 } from 'lucide-react';
 
 import { saveLessonProgress, type Enrollment } from '@/actions/dashboard';
+import type { ReactNode } from 'react';
+import { getEnrollment } from '@/actions/dashboard';
+import LabLesson from '@/components/courses/lessons/LabLesson';
+import QuizLesson from '@/components/courses/lessons/QuizLesson';
+import TextLesson from '@/components/courses/lessons/TextLesson';
 
 interface CoursePlayerClientProps {
   course: any;
@@ -283,6 +288,40 @@ export default function CoursePlayerClient({ course, enrollment }: CoursePlayerC
   const videoId = activeVideoUrl ? getYouTubeVideoId(activeVideoUrl) : null;
   const currentResources = course.resources || [];
 
+  // Leçons texte, lab et quiz : elles remplacent la zone vidéo. Une leçon sans contenu texte ni quiz
+  // rattaché (toutes les leçons existantes) garde exactement le rendu vidéo d'avant.
+  const lessonType: string | undefined = activeLesson?.lesson_type;
+  const hasNextLesson = currentIndex !== -1 && currentIndex < allLessons.length - 1;
+  const isActivityLesson = lessonType === 'LAB' || (lessonType === 'QUIZ' && Boolean(activeLesson?.quiz));
+  // Lab ou quiz réussi : la leçon est terminée par courses-api, on relit la progression
+  const refreshEnrollment = useCallback(async () => {
+    if (isTracked) applyEnrollment(await getEnrollment(course.slug));
+  }, [isTracked, course.slug, applyEnrollment]);
+  let activityPanel: ReactNode = null;
+  if (lessonType === 'LAB') {
+    activityPanel = (
+      <LabLesson
+        key={activeLesson.id}
+        lab={activeLesson.lab_details ?? null}
+        courseSlug={course.slug}
+        lessonId={activeLesson.id}
+        completed={completedIds.has(activeLesson.id)}
+        onNext={hasNextLesson ? handleNextLesson : undefined}
+      />
+    );
+  } else if (lessonType === 'QUIZ' && activeLesson?.quiz) {
+    activityPanel = (
+      <QuizLesson
+        key={activeLesson.id}
+        quizId={String(activeLesson.quiz)}
+        onPassed={refreshEnrollment}
+        onNext={hasNextLesson ? handleNextLesson : undefined}
+      />
+    );
+  } else if ((lessonType === 'ARTICLE' || lessonType === 'DOCUMENT') && activeLesson?.content?.trim()) {
+    activityPanel = <TextLesson title={activeLesson.title} content={activeLesson.content} />;
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-neutral-900 text-neutral-100 font-sans">
 
@@ -390,6 +429,7 @@ export default function CoursePlayerClient({ course, enrollment }: CoursePlayerC
       {/* ================= 2. MAIN CONTENT & PLAYER ================= */}
       <main className="flex-1 flex flex-col h-full overflow-y-auto bg-neutral-900">
 
+        {activityPanel ?? (
         <div className="w-full bg-neutral-950 border-b border-neutral-800 shadow-2xl shrink-0 flex items-center justify-center">
           <div className="w-full max-w-5xl aspect-video relative flex items-center justify-center">
             {videoId && mounted ? (
@@ -413,6 +453,7 @@ export default function CoursePlayerClient({ course, enrollment }: CoursePlayerC
             )}
           </div>
         </div>
+        )}
 
         <div className="flex-1 p-8 max-w-6xl w-full mx-auto flex flex-col gap-6">
           <div className="flex items-center justify-between">
@@ -422,6 +463,9 @@ export default function CoursePlayerClient({ course, enrollment }: CoursePlayerC
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
+              {/* Lab et quiz : la leçon se termine en réussissant l'activité, pas à la main */}
+              {!isActivityLesson && (
+              <>
               {isTracked && activeLesson && (
                 <button
                   onClick={() => markLessonCompleted(activeLesson.id)}
@@ -431,6 +475,8 @@ export default function CoursePlayerClient({ course, enrollment }: CoursePlayerC
                   <CheckCircle2 className="w-3.5 h-3.5" />
                   <span>{completedIds.has(activeLesson.id) ? 'Completed' : 'Mark as complete'}</span>
                 </button>
+              )}
+              </>
               )}
               <button
                 onClick={handlePrevLesson}

@@ -169,6 +169,19 @@ codes promo. Colonnes : `lib/courseSpreadsheet.ts` ; logique : `lib/courseTransf
 Une ligne dont l'`id` (le `slug` pour un cours) existe est mise à jour, sinon créée ; une colonne absente
 n'efface rien ; **rien n'est supprimé**. Références par `course_slug`, et id ou titre pour module / leçon.
 Le fichier d'une ressource ne s'importe pas (seulement `external_url`).
+**Types de leçon et quiz** (`CurriculumEditor.tsx`) : le select *Lesson type* propose aussi *Lab*.
+`LessonTypeFields.tsx` (dans le formulaire de leçon, écoute le select sans le modifier) affiche selon le type :
+*Lesson text* (`content`, ARTICLE / DOCUMENT), *Practice lab* (`lab`, labs **publiés** de
+`getLessonLabOptions()` = `/api/labs/manage/?status=published` + catalogue `/api/labs/`), ou un rappel pour
+QUIZ. Ces champs ne sont envoyés que s'ils sont affichés, et le lab seulement s'il change : une leçon vidéo
+est enregistrée exactement comme avant. Dans la liste, une leçon QUIZ a un bouton *Quiz* / *Create quiz*
+(`LessonQuizButton.tsx`) qui ouvre en modale `QuizEditor.tsx` : réglages (score de réussite, tentatives,
+durée, mélange), questions ordonnées (type, énoncé, points, explication), choix et bonnes réponses (choix
+unique : une seule), réponses acceptées (réponse courte), langage, code de départ et tests stdin / sortie
+attendue (code, 10 max). Actions : `actions/manageQuizzes.ts` → `getManagedQuiz`, `saveQuizAction` (POST ou
+PATCH `/api/quizzes/manage/`, puis `PATCH /api/lessons/<id>/ {quiz}` à la création) ; erreurs DRF imbriquées
+lisibles via `lib/quizErrors.ts`. Les droits restent vérifiés par courses-api.
+
 Écrans : liste (`page.tsx`), création (`new/page.tsx`, redirige vers l'éditeur), éditeur
 (`[slug]/page.tsx` = `CourseForm` + `CurriculumEditor`). Un cours déjà commandé ne peut pas être
 supprimé (409) : le passer en brouillon.
@@ -248,6 +261,22 @@ un message, sans casser la page.
   - à la réouverture, le lecteur reprend sur la dernière leçon à la position enregistrée
     (le lien *Continue* pointe vers `/course/<slug>/learn#<leçon>`).
 - Le pourcentage = leçons publiées terminées / leçons publiées du cours (calculé par courses-api).
+
+### Leçons texte, lab et quiz (lecteur `/course/<slug>/learn`)
+
+`CoursePlayerClient.tsx` choisit le panneau selon `lesson.lesson_type` (voir « Types de leçon » dans le
+`CLAUDE.md` de courses-api). Le panneau **remplace la zone vidéo** ; sinon le rendu vidéo d'origine est inchangé.
+
+| Leçon | Panneau (`components/courses/lessons/`) | *Mark as complete* |
+|---|---|---|
+| `LAB` | `LabLesson.tsx` : lien *Open the lab* → `/labs/<slug>?course=<slug du cours>&lesson=<id>` ; la page du lab affiche alors un bouton fixe *Back to lesson* (`app/labs/[labSlug]/page.tsx`, paramètres validés) | masqué : la leçon se termine quand le lab est réussi (courses-api, signal `activity_completed`) ; la progression est relue au retour dans le lecteur |
+| `QUIZ` **avec** `quiz` | `QuizLesson.tsx` : intro (tentatives, meilleur score), questions (radio, cases, texte, éditeur CodeMirror `components/lab/code-editor.tsx` pour le code), minuteur et soumission automatique si `time_limit_min`, résultat avec corrections et explications, *Try again* si des tentatives restent, *Next lesson* après réussite | masqué ; à la réussite, `onPassed` relit l'inscription (`getEnrollment`) |
+| `ARTICLE` / `DOCUMENT` **avec** `content` | `TextLesson.tsx` (texte affiché tel quel, `whitespace-pre-wrap`) | affiché |
+| autres (dont `QUIZ` sans quiz et texte vide : toutes les leçons existantes) | zone vidéo d'origine | affiché |
+
+Server actions des quiz : `actions/quizzes.ts` → `getQuiz`, `startQuizAttempt`, `submitQuizAttempt`,
+`getQuizAttempt` (cookie `access_token`, identifiants validés en UUID ; jamais de bonne réponse avant correction).
+Tests : `components/courses/CoursePlayerClient.test.tsx`, `components/courses/lessons/QuizLesson.test.tsx`.
 
 ### Couleurs
 
