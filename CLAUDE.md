@@ -169,6 +169,19 @@ codes promo. Colonnes : `lib/courseSpreadsheet.ts` ; logique : `lib/courseTransf
 Une ligne dont l'`id` (le `slug` pour un cours) existe est mise à jour, sinon créée ; une colonne absente
 n'efface rien ; **rien n'est supprimé**. Références par `course_slug`, et id ou titre pour module / leçon.
 Le fichier d'une ressource ne s'importe pas (seulement `external_url`).
+**Types de leçon et quiz** (`CurriculumEditor.tsx`) : le select *Lesson type* propose aussi *Lab*.
+`LessonTypeFields.tsx` (dans le formulaire de leçon, écoute le select sans le modifier) affiche selon le type :
+*Lesson text* (`content`, ARTICLE / DOCUMENT), *Practice lab* (`lab`, labs **publiés** de
+`getLessonLabOptions()` = `/api/labs/manage/?status=published` + catalogue `/api/labs/`), ou un rappel pour
+QUIZ. Ces champs ne sont envoyés que s'ils sont affichés, et le lab seulement s'il change : une leçon vidéo
+est enregistrée exactement comme avant. Dans la liste, une leçon QUIZ a un bouton *Quiz* / *Create quiz*
+(`LessonQuizButton.tsx`) qui ouvre en modale `QuizEditor.tsx` : réglages (score de réussite, tentatives,
+durée, mélange), questions ordonnées (type, énoncé, points, explication), choix et bonnes réponses (choix
+unique : une seule), réponses acceptées (réponse courte), langage, code de départ et tests stdin / sortie
+attendue (code, 10 max). Actions : `actions/manageQuizzes.ts` → `getManagedQuiz`, `saveQuizAction` (POST ou
+PATCH `/api/quizzes/manage/`, puis `PATCH /api/lessons/<id>/ {quiz}` à la création) ; erreurs DRF imbriquées
+lisibles via `lib/quizErrors.ts`. Les droits restent vérifiés par courses-api.
+
 Écrans : liste (`page.tsx`), création (`new/page.tsx`, redirige vers l'éditeur), éditeur
 (`[slug]/page.tsx` = `CourseForm` + `CurriculumEditor`). Un cours déjà commandé ne peut pas être
 supprimé (409) : le passer en brouillon.
